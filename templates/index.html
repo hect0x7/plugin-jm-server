@@ -1,3 +1,4 @@
+<!--suppress HtmlWrongAttributeValue, HtmlUnknownAttribute, HtmlUnknownTarget, HtmlUnknownTag -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -8,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache"/>
     <meta http-equiv="Pragma" content="no-cache"/>
     <meta http-equiv="Expires" content="0"/>
-    <title>flask 文件共享</title>
+    <title>文件浏览器 | 离线看本</title>
     <link rel="stylesheet" href="../static/css/index.css?t={{ randomArg }}">
     <script src="../static/js/index.js?t={{ randomArg }}"></script>
 </head>
@@ -19,7 +20,7 @@
     <div class="drivers-container">
         根目录：
         {% for driver in data.drivers %}
-            <a href="javascript:;" location="{{ driver }}" style="color:#66ccff">{{ driver }}</a>
+        <a href="javascript:" location="{{ driver }}" style="color:#66ccff">{{ driver }}</a>
         {% endfor %}
         <h3 class="currentPath">当前路径：<span>{{ data.currentPath }}</span></h3>
     </div>
@@ -30,28 +31,30 @@
             <td class="td-name">文件或文件夹</td>
             <td class="td-size">大小</td>
             <td class="td-ctime">创建日期</td>
+            <td class="td-jm_view">文件夹看本</td>
         </tr>
         <!-- 将传上来的files进行遍历 输出HTML标签 -->
         {% for file in data.files %}
+        <tr type="{{ file.jm_view }}">
+            <td class="td-name {{ file.type }}">
+                <a href="/download_file/{{ file.name }}" dirname="{{ file.name }}">
+                    {{ file.name }}
+                </a>
+            </td>
+            <td class="td-size">{{ file.size }}</td>
+            <td class="td-ctime">{{ file.ctime }}</td>
 
-            {#
-            file:
-                {
-                    'name': '.idea',
-                    'size': '<DIR>',
-                    'ctime': '2023/12/19',
-                    'type': 'dir'
-                }
-            #}
-            <tr type="{{ file.type }}">
-                <td class="td-name {{ file.type }}">
-                    <a href="/download_file/{{ file.name }}" dirname="{{ file.name }}">
-                        {{ file.name }}
-                    </a>
-                </td>
-                <td class="td-size">{{ file.size }}</td>
-                <td class="td-ctime">{{ file.ctime }}</td>
-            </tr>
+            <td class="td-jm_view">
+                <!-- 判断 file.jm_view 是否是true -->
+                {% if file.jm_view %}
+                <!-- 使用onclick -->
+                <a href="javascript:" onclick="openJmView('{{ file.name }}', '{{ file.type }}')">
+                    看本
+                </a>
+                {% endif %}
+            </td>
+
+        </tr>
         {% endfor %}
     </table>
     <form action="/" method="GET" style="display: none;" id="pathForm">
@@ -60,6 +63,14 @@
         </label>
         <input type="submit">
     </form>
+
+    <form action="/jm_view" method="GET" style="display: none;" id="jmViewForm">
+        <label>
+            <input type="text" name="path" value>
+        </label>
+        <input type="submit">
+    </form>
+
     <section class="float-tablet">
         <button>
             <h4><a href="/upload_file">上 传 文 件</a></h4>
@@ -73,11 +84,11 @@
             <div class="drivers-container">
                 根目录：
                 {% for driver in data.drivers %}
-                    <a href="javascript:;" location="{{ driver }}" style="color:black">{{ driver }}</a>
+                <a href="javascript:" location="{{ driver }}" style="color:black">{{ driver }}</a>
                 {% endfor %}
                 <h3 class="currentPath">当前路径：<span>{{ data.currentPath }}</span></h3>
             </div>
-            <button class="to-lastPath" onclick="window.history.back()">&nbsp;←&nbsp;&nbsp;上级目录</button>
+            <button class="to-lastPath" onclick="goBack()">&nbsp;←&nbsp;&nbsp;上级目录</button>
             <button id="to-top">返回顶部</button>
         </div>
     </section>

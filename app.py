@@ -69,25 +69,56 @@ def url_random_arg():
     return randint(100000, 1000000)
 
 
+@app.route('/jm_view', methods=['GET'])
+def jm_view():
+    """
+    以禁漫章节的模式观看指定文件夹下的图片
+    """
+    # 判断是否已经在登录状态上
+    if not verify():
+        # 之前没有登录过,返回登录页
+        return redirect('/login')
+
+    # 已经登录了，返回文件夹内文件信息（此时为默认路径）
+    path = request.args.get('path', None)
+
+    if path is None:
+        return redirect('/')
+
+    path = os.path.abspath(path)
+
+    # 文件不存在
+    if common.file_not_exists(path):
+        return abort(404)
+
+    print(f'jm_view: {path}')
+    return render_template(url_format(mobile_check(), "jm_view.html"),
+                           data={
+                               "files": get_files_data(path),
+                               "currentPath": path,
+                           },
+                           randomArg=url_random_arg())
+
+
 @app.route('/', methods=['GET'])
 def index():
     """
     共享文件主页
     """
     # 判断是否已经在登录状态上
-    device_isMobile = mobile_check()
     if not verify():
         # 之前没有登录过,返回登录页
         return redirect('/login')
 
     # 已经登录了，返回文件夹内文件信息（此时为默认路径）
     path = request.args.get('path', DEFAULT_PATH)
+    path = os.path.abspath(path)
 
     # 文件不存在
     if common.file_not_exists(path):
         return abort(404)
 
-    return render_template(url_format(device_isMobile, "index.html"),
+    return render_template(url_format(mobile_check(), "index.html"),
                            data={
                                "files": get_files_data(path),
                                "drivers": DRIVERS_LIST,

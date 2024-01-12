@@ -1,11 +1,28 @@
 import os
 import time
 
+import common
+
 from driver import get_winDriver
 
 DEFAULT_PATH = 'D:/GitProject/dev/pip/jmcomic/assets/download'
 DRIVERS_LIST = get_winDriver()
 current_path = ''
+
+
+def is_image_file(filename):
+    # 获取文件名的小写形式并去掉路径
+    file_extension = filename.lower().split('.')[-1]
+
+    # 常见图片文件扩展名列表
+    image_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp']
+
+    # 判断文件扩展名是否在图片扩展名列表中
+    return file_extension in image_extensions
+
+
+def check_dir_can_open_jm_view(dirpath):
+    return any(f for f in common.files_of_dir(dirpath) if is_image_file(f))
 
 
 # 获取文件信息的函数
@@ -16,18 +33,31 @@ def get_files_data(path):
     global current_path
     files = []
 
-    for the_name in os.listdir(path):
+    try:
+        listdir = os.listdir(path)
+    except OSError:
+        # 无权限
+        return []
+
+    for file_name in listdir:
         # 拼接路径
-        file_path = path + "/" + the_name
+        file_path = os.path.abspath(os.path.join(path, file_name))
 
         # 判断是文件夹还是文件
         if os.path.isfile(file_path):
             the_type = 'file'
+            jm_view = check_dir_can_open_jm_view(common.of_dir_path(file_path))
         else:
             the_type = 'dir'
+            jm_view = check_dir_can_open_jm_view(file_path)
 
-        name = the_name
-        size = os.path.getsize(file_path)
+        name = file_name
+        try:
+            size = os.path.getsize(file_path)
+        except OSError as e:
+            print(e)
+            continue
+
         size = file_size_format(size, the_type)
         # 创建时间
         getctime = os.path.getctime(file_path)
@@ -44,13 +74,11 @@ def get_files_data(path):
             "size": size,
             # 拼接年月日信息
             "ctime": time_str,
-            "type": the_type
+            "type": the_type,
+            'jm_view': jm_view
         })
     # 更新当前路径
     current_path = path
-
-    print('files_data:\n'
-          f'{files}')
 
     return files
 

@@ -38,8 +38,7 @@ h3 {
 }
 
 .all-container {
-  padding: 20px;
-  padding-right: 0;
+  padding: 20px 0 20px 20px;
 }
 
 .files-table {
@@ -83,7 +82,11 @@ h3 {
   border-right: 1px solid #ccc
 }
 
-tr[type="dir"] {
+/*tr[type="dir"] {
+  background-color: rgba(224, 255, 255, .8);
+}*/
+
+tr[type="True"] {
   background-color: rgba(224, 255, 255, .8);
 }
 
@@ -103,6 +106,10 @@ a:visited {
 
 .td-ctime {
   color: rgb(255, 183, 0);
+}
+
+.td-jm_view {
+  color: rgb(233, 116, 26);
 }
 
 .drivers-container {
