@@ -5,9 +5,25 @@ import common
 
 from driver import get_winDriver
 
-DEFAULT_PATH = 'D:/GitProject/dev/pip/jmcomic/assets/download'
+DEFAULT_PATH = 'D:/'
 DRIVERS_LIST = get_winDriver()
 current_path = ''
+
+
+def get_jm_view_images(path):
+    images_data = []
+
+    from urllib.parse import quote
+    for f in common.files_of_dir(path):
+        if not is_image_file(f):
+            return
+        f = quote(f)
+        images_data.append({
+            "filename": common.of_file_name(f),
+            "data_original": f'/view_file?path={f}',
+        })
+
+    return images_data
 
 
 def is_image_file(filename):

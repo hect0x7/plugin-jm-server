@@ -6,7 +6,13 @@
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link href="https://18comic.org//templates/frontend/airav/css/bootstrap.css?v=2024011102" rel="stylesheet">
+    <link href="../static/css/bootstrap.css" rel="stylesheet">
+    <script src="../static/js/jquery-3.7.1.min.js"></script>
+    <script src="../static/js/jquery.album-0.2.js"></script>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/style_photo.css">
+    <link rel="stylesheet" href="../static/css/fontawesome.min.css">
     <style>
       img {
         width: 100%;
@@ -23,161 +29,80 @@
         <div style="padding:0">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <div class="pull-left">[帅气上班族] [あおむし] 暴君系女子 (COMIC BAVEL 2019年3月号) [中国翻訳]</div>
+                    <div class="pull-left">{{ data.title }}</div>
                     <div class="clearfix"></div>
                 </div>
                 <div class="panel-body" style="clear: both;">
                     <div class="row thumb-overlay-albums">
-                        <div class="center scramble-page" id="00001.webp" style="min-height: 1378.05px;">
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00001.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00001.webp"
-                                 id="album_photo_00001.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="0">
-                        </div>
-                        <div class="center scramble-page" id="00002.webp" style="min-height: 1378.08px;">
+                        {#
+                            <div class="center scramble-page" id="00019.webp" style="min-height: 1378.02px;">
 
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00002.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00002.webp"
-                                 id="album_photo_00002.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="1">
-                        </div>
-                        <div class="center scramble-page" id="00003.webp" style="min-height: 1378.08px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00003.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00003.webp"
-                                 id="album_photo_00003.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="2">
-                        </div>
-                        <div class="center scramble-page" id="00004.webp" style="min-height: 1378.05px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00004.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00004.webp"
-                                 id="album_photo_00004.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="3">
-                        </div>
-                        <div class="center scramble-page" id="00005.webp" style="min-height: 1378.05px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00005.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00005.webp"
-                                 id="album_photo_00005.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="4">
-                        </div>
-                        <div class="center scramble-page" id="00006.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00006.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00006.webp"
-                                 id="album_photo_00006.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="5">
-                        </div>
-                        <div class="center scramble-page" id="00007.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00007.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00007.webp"
-                                 id="album_photo_00007.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="6">
-                        </div>
-                        <div class="center scramble-page" id="00008.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00008.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00008.webp"
-                                 id="album_photo_00008.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="7">
-                        </div>
-                        <div class="center scramble-page" id="00009.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00009.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00009.webp"
-                                 id="album_photo_00009.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="8">
-                        </div>
-                        <div class="center scramble-page" id="00010.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00010.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00010.webp"
-                                 id="album_photo_00010.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="9">
-                        </div>
-                        <div class="e8c78e-4_b" data-group="photo_center_games_1" data-width="800" data-height="250"
-                             data-nolt="1" style="background-color: white;" data-type-img="1" data-show="ok"
-                             data-no-bgi="1"
-                             data-type-4_0="1">
-                            <p style="margin: 0;">
-                        </div>
-                        <div class="center scramble-page" id="00011.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00011.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00011.webp"
-                                 id="album_photo_00011.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="10">
-                        </div>
-                        <div class="center scramble-page" id="00012.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00012.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00012.webp"
-                                 id="album_photo_00012.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="11">
-                        </div>
-                        <div class="center scramble-page" id="00013.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00013.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00013.webp"
-                                 id="album_photo_00013.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="12">
-                        </div>
-                        <div class="center scramble-page" id="00014.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00014.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00014.webp"
-                                 id="album_photo_00014.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="13">
-                        </div>
-                        <div class="center scramble-page" id="00015.webp" style="min-height: 1378.03px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00015.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00015.webp"
-                                 id="album_photo_00015.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="14">
-                        </div>
-                        <div class="center scramble-page" id="00016.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00016.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00016.webp"
-                                 id="album_photo_00016.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="15">
-                        </div>
-                        <div class="center scramble-page" id="00017.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00017.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00017.webp"
-                                 id="album_photo_00017.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="16">
-                        </div>
-                        <div class="center scramble-page" id="00018.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00018.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00018.webp"
-                                 id="album_photo_00018.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="17">
-                        </div>
-                        <div class="center scramble-page" id="00019.webp" style="min-height: 1378.02px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00019.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00019.webp"
-                                 id="album_photo_00019.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="18">
-                        </div>
-                        <div class="center scramble-page" id="00020.webp" style="min-height: 1378px;">
-
-                            <img src="https://cdn-msp.18comic.org/media/photos/179442/00020.webp"
-                                 data-original="https://cdn-msp.18comic.org/media/photos/179442/00020.webp"
-                                 id="album_photo_00020.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
-                                 data-page="19">
-                        </div>
+                                <img src="https://cdn-msp.18comic.org/media/photos/179442/00019.webp"
+                                     data-original="https://cdn-msp.18comic.org/media/photos/179442/00019.webp"
+                                     id="album_photo_00019.webp" class="lazy_img img-responsive-mw lazy-loaded" style=""
+                                     data-page="18">
+                            </div>
+                        #}
+                        {% for image in data.images %}
+                            <div class="center scramble-page" id="{{ image.filename }}" style="min-height: 1378px;">
+                                <img src="{{ image.data_original }}"
+                                     data-original="{{ image.data_original }}"
+                                     class="lazy_img img-responsive-mw lazy-loaded"
+                                >
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+
+<div class="menu-bolock hidden-xs hidden-sm">
+    <ul style="list-style:none;">
+        <li>
+            <a href="javascript:void(0)"><i class="fas fa-sort-down"></i><span>收合</span></a>
+        </li>
+    </ul>
+    <ul class="menu-bolock-ul" style="list-style:none;">
+        {#        <li>#}
+        {#            <a class="forum-open" href="javascript:;">#}
+        {#                <span>666</span>#}
+        {#                <span>評論</span></a>#}
+        {#        </li>#}
+        {#        <li>#}
+        {#            <a href="javascript:void(0)" id="love_heart_407527"><i class="far fa-thumbs-up"></i><span>喜歡</span></a>#}
+        {#        </li>#}
+        {#        <li>#}
+        {#            <a href="/album_download/407527">#}
+        {#                <i class="fas fa-download"></i>#}
+        {#                <span>下載</span>#}
+        {#            </a>#}
+        {#        </li>#}
+        {#        <li>#}
+        {#            <a id="favorite_album_407527"><i class="fa fa-bookmark"></i><span>收藏</span></a>#}
+        {#        </li>#}
+        {#        <li style="margin-top: 15px;">#}
+        {#            <a href="?read_mode=read-by-page"><i class="fas fa-book"></i><span>分頁閱讀</span></a>#}
+        {#        </li>#}
+        <li style="margin-top: 15px;">
+            <a href="/?path={{ data.openFromDir }}"><i class="fas fa-book"></i><span>原路返回</span></a>
+        </li>
+        <li>
+            <a href="https://18comic.vip/search/photos?main_tag=0&search_query={{ data.title }}">
+                <i class="far fa-list-alt"></i><span>搜原本</span></a>
+        </li>
+        {#        <li style="margin-bottom: 15px;">#}
+        {#            <a id="gotoRelated" href="javascript:void(0)"><img#}
+        {#                    src="/templates/frontend/airav/img/phicon/u1444.png?v=2024011102"#}
+        {#                    style="margin: auto;width: 24px;display: block;"><span>相關漫畫</span></a>#}
+        {#        </li>#}
+        <li>
+            <a id="gotop" href="javascript:void(0)"><i class="far fa-caret-square-up"></i><span>回到頂端</span></a>
+        </li>
+
+    </ul>
 </div>
 
 </body>

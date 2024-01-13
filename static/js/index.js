@@ -1,15 +1,14 @@
-function openJmView(filename, fileType) {
-    let dirPath = getCurPath();
-
-    if (fileType === 'dir') {
-        dirPath = dirPath + '/' + filename
-    }
+function openJmView(filename, _fileType) {
+    let curPath = getCurPath();
+    const viewDir = curPath + '/' + filename
 
     // console.log(`openJmView -> ${dirPath}`);
-    alert(dirPath)
+    // alert(dirPath)
     const jmViewForm = document.querySelector('#jmViewForm input[type="submit"]');
-    const path = document.querySelector('#jmViewForm input[type="text"]');
-    path.value = dirPath;
+    const path = document.querySelector('#jmViewForm input[name="path"]');
+    const openFromDir = document.querySelector('#jmViewForm input[name="openFromDir"]');
+    path.value = viewDir;
+    openFromDir.value = curPath;
     jmViewForm.click();
 }
 
