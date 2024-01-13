@@ -17,9 +17,18 @@ class JmServer:
 
     def __init__(self,
                  default_path,
-                 access_secret,
+                 password,
                  current_path=None,
+                 **extra,
                  ):
+        """
+        创建一个共享文件服务器
+
+        :param default_path: 默认路径
+        :param password: 登录密码
+        :param current_path: 当前路径
+        :param extra: 额外配置
+        """
         if current_path is None:
             current_path = default_path
 
@@ -31,8 +40,9 @@ class JmServer:
                          )
         self.app.secret_key = __file__
         # 设置登录密钥
-        self.password = access_secret
+        self.password = password
         self.file_manager = FileManager(default_path, current_path)
+        self.extra = extra
 
     def verify(self):
         """
@@ -242,4 +252,4 @@ class JmServer:
         self.app.add_url_rule("/upload_file", 'upload', self.upload, methods=['GET', 'POST'])
 
         # 监听在所有 IP 地址上
-        self.app.run(host='0.0.0.0', **kwargs)
+        self.app.run(**kwargs)
