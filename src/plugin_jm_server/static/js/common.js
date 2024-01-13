@@ -7,4 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
             element.style.display = 'none';
         }
     });
+
+//     id=gobottom，对这个元素实现跳转到页面最底部
+    const bottom = document.getElementById('gobottom');
+    bottom.addEventListener('click', () => {
+        window.scrollTo(0, document.body.scrollHeight);
+    });
 });

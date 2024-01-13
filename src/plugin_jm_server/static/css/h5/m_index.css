@@ -5,8 +5,8 @@
 
 html,
 body {
-  width: 100%;
-  height: 100%;
+  /*width: 100%;*/
+  /*height: 100%;*/
 }
 
 body {
@@ -28,25 +28,24 @@ h3 span {
 }
 
 .all-container {
+  background-color: black;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   width: 100%;
   height: 100%;
   text-align: center;
-  overflow: hidden;
 }
 
 .flash-tablet {
   width: 100%;
   border-radius: 0 0 12px 12px;
-  background-color: #0093E9;
-  background-image: linear-gradient(160deg, #0093E9 0%, #80D0C7 100%);
+  /*background-color: #0093E9;*/
+  /*background-image: linear-gradient(160deg, #0093E9 0%, #80D0C7 100%);*/
 }
 
 .drivers-container {
   padding: 8px 0 8px 8px;
-  max-height: 100px;
   color: deeppink;
   font-size: 18px;
   text-align: center;
