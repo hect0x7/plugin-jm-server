@@ -14,9 +14,9 @@ def get_jm_view_images(path):
     images_data = []
 
     from urllib.parse import quote
-    for f in common.files_of_dir(path):
+    for f in files_of_dir_safe(path):
         if not is_image_file(f):
-            return
+            continue
         f = quote(f)
         images_data.append({
             "filename": common.of_file_name(f),
@@ -37,8 +37,14 @@ def is_image_file(filename):
     return file_extension in image_extensions
 
 
+def files_of_dir_safe(dir_path):
+    try:
+        return common.files_of_dir(dir_path)
+    except OSError:
+        return []
+
 def check_dir_can_open_jm_view(dirpath):
-    return any(f for f in common.files_of_dir(dirpath) if is_image_file(f))
+    return any(f for f in files_of_dir_safe(dirpath) if is_image_file(f))
 
 
 # 获取文件信息的函数

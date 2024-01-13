@@ -85,6 +85,7 @@ def jm_view():
     if path is None:
         return redirect('/')
 
+    path = os.path.abspath(path)
     if os.path.isfile(path):
         path = common.of_dir_path(path)
 
