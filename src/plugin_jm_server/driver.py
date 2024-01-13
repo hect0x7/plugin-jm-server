@@ -1,15 +1,14 @@
 import os
 
-import psutil
-
 
 def get_winDriver():
     """
     Windows操作系统下,返回全部驱动器卷标['C:\','D:\']
     """
+    import psutil
     # 返回驱动器卷标列表
     driver_list = sorted([driver.device for driver in psutil.disk_partitions(True)])
-    
+
     i = 0
     num = len(driver_list)
     while num != 0:
@@ -39,5 +38,3 @@ def get_winDriver():
 if __name__ == "__main__":
     paths = get_winDriver()
     print(paths)
-
-
