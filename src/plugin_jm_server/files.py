@@ -52,13 +52,7 @@ class FileManager:
     def get_files_data(self, path):
         files = []
 
-        try:
-            listdir = os.listdir(path)
-        except OSError:
-            return []
-
-        for file_name in listdir:
-            file_path = os.path.abspath(os.path.join(path, file_name))
+        for file_path in self.files_of_dir_safe(path):
 
             if os.path.isfile(file_path):
                 the_type = 'file'
@@ -67,11 +61,10 @@ class FileManager:
                 the_type = 'dir'
                 jm_view = self.check_dir_can_open_jm_view(file_path)
 
-            name = file_name
+            name = common.of_file_name(file_path)
             try:
                 size = os.path.getsize(file_path)
-            except OSError as e:
-                print(e)
+            except OSError:
                 continue
 
             size = self.file_size_format(size, the_type)
@@ -79,8 +72,7 @@ class FileManager:
             try:
                 ctime = time.localtime(getctime)
                 time_str = "{}/{}/{}".format(ctime.tm_year, ctime.tm_mon, ctime.tm_mday)
-            except OSError as e:
-                print(e)
+            except OSError:
                 continue
 
             files.append({

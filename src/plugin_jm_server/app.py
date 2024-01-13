@@ -32,14 +32,14 @@ class JmServer:
                          )
         self.app.secret_key = __file__
         # 设置登录密钥
-        self.access_secret = access_secret
+        self.password = access_secret
         self.file_manager = FileManager(default_path, current_path)
 
     def verify(self):
         """
         验证登录状态
         """
-        if session.get('uname', None) == self.access_secret:
+        if session.get('password', None) == self.password:
             return True
         else:
             return False
@@ -166,14 +166,14 @@ class JmServer:
                                        randomArg=self.url_random_arg())
         else:
             # 先保存才能验证
-            uname = request.form.get('uname')
-            session['uname'] = uname
+            password = request.form.get('password')
+            session['password'] = password
             if self.verify():
                 # 重定向到首页
                 return redirect('/')
             else:
                 # 登录失败的情况
-                flash("该用户名和密码不存在，请重试")
+                flash("密码错误！")
                 return redirect('/login')
 
     def logout(self):
@@ -184,8 +184,8 @@ class JmServer:
             # 声明重定向对象
             resp = redirect('/')
             # 删除值
-            resp.delete_cookie('uname')
-            session.pop('uname', None)
+            resp.delete_cookie('password')
+            session.pop('password', None)
             return resp
         else:
             # 没有登录过,返回登录页
