@@ -3,7 +3,7 @@ import time
 
 import common
 
-from driver import get_winDriver
+from .driver import get_winDriver
 
 DEFAULT_PATH = 'D:/'
 DRIVERS_LIST = get_winDriver()

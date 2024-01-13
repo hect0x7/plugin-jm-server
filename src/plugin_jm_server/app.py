@@ -7,7 +7,7 @@ from flask import Flask, abort
 from flask import render_template, send_from_directory
 from flask import request, session, redirect, flash
 
-from files import get_files_data, DEFAULT_PATH, DRIVERS_LIST, \
+from .files import get_files_data, DEFAULT_PATH, DRIVERS_LIST, \
     get_current_path, get_jm_view_images
 
 # 创建项目以及初始化一些关键信息
