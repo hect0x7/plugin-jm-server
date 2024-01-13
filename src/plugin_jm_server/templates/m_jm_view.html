@@ -5,7 +5,10 @@
 <head>
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,
+    user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <link rel="stylesheet" href="../static/css/h5/normalize.css?t={{ randomArg }}">
+    <link rel="stylesheet" href="../static/css/h5/m_index.css?t={{ randomArg }}">
     <link href="../static/css/bootstrap.css" rel="stylesheet">
     <script src="../static/js/jquery-3.7.1.min.js"></script>
     <script src="../static/js/jquery.album-0.2.js"></script>
@@ -45,7 +48,7 @@
                             </div>
                         #}
                         {% for image in data.images %}
-                            <div class="center scramble-page" id="{{ image.filename }}" >
+                            <div class="center scramble-page" id="{{ image.filename }}">
                                 <img src="{{ image.data_original }}"
                                      data-original="{{ image.data_original }}"
                                      class="lazy_img img-responsive-mw lazy-loaded"

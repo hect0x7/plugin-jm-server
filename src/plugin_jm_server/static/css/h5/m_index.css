@@ -10,7 +10,7 @@ body {
 }
 
 body {
-  background: url(../../img/m_body-background.jpeg) no-repeat fixed bottom center;
+  /*background: url(../../img/m_body-background.jpeg) no-repeat fixed bottom center;*/
   /* background-size: 100% 115%; */
   background-size: cover;
   margin: 0 auto;
@@ -18,8 +18,8 @@ body {
   max-width: 640px;
   font-size: 16px;
   font-family: -apple-system, Helvetica, sans-serif;
-  color: white;
   line-height: 1.5;
+  background-color: black;
   text-align: center;
 }
 
@@ -39,23 +39,19 @@ h3 span {
 
 .flash-tablet {
   width: 100%;
-  border-radius: 12px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  border-radius: 0 0 12px 12px;
   background-color: #0093E9;
   background-image: linear-gradient(160deg, #0093E9 0%, #80D0C7 100%);
 }
 
 .drivers-container {
   padding: 8px 0 8px 8px;
-  overflow: auto;
   max-height: 100px;
+  color: deeppink;
   font-size: 18px;
-  text-align: left;
-  border-radius: 12px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  box-shadow: 1px 1px 6px 3px rgb(0 0 0 / 30%);
+  text-align: center;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 6px 6px 6px 6px rgb(0 0 0 / 30%);
 }
 
 .drivers-container a {
@@ -98,17 +94,18 @@ a:visited {
 }
 
 .td-name {
-  width: 60%;
 }
 
 .td-size {
   color: rgb(30, 143, 255);
-  width: 20%;
 }
 
 .td-ctime {
   color: rgb(255, 183, 0);
-  width: 20%;
+}
+
+.td-jm_view {
+  color: rgb(233, 116, 26);
 }
 
 tr[type="dir"] td:first-child a {

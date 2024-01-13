@@ -1,6 +1,5 @@
 import os
 import re
-from random import randint
 
 import common
 from flask import Flask, abort
@@ -66,7 +65,7 @@ class JmServer:
         根据设备类型返回对应的资源 url
         """
         if device_isMobile:
-            return './h5/m_' + default_load_url
+            return './m_' + default_load_url
         else:
             return default_load_url
 
@@ -74,7 +73,9 @@ class JmServer:
         """
         url添加一个随机参数，防止浏览器缓存
         """
-        return randint(100000, 1000000)
+        # from random import randint
+        # return randint(100000, 1000000)
+        return 0
 
     def jm_view(self):
         """
