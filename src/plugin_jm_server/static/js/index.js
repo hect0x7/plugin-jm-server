@@ -13,7 +13,7 @@ function openJmView(filename, _fileType) {
 }
 
 function getCurPath() {
-    return (document.querySelectorAll('.currentPath span'))[0].innerHTML
+    return (document.querySelectorAll('.currentPath span'))[0].innerHTML.trim()
 }
 
 function goBack() {

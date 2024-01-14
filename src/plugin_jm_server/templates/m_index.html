@@ -25,9 +25,7 @@
             <a href="javascript:" location="{{ driver }}" style="color:#66ccff">{{ driver }}</a>
         {% endfor %}
         <h3 class="currentPath">当前路径：
-            <span style="word-wrap: break-word;overflow-wrap: break-word;">
-            {{ data.currentPath }}
-            </span>
+            <span style="word-wrap: break-word;overflow-wrap: break-word;">{{ data.currentPath }}</span>
         </h3>
     </div>
     <button class="to-lastPath" onclick="goBack()" style="background-color: orange">&nbsp;←&nbsp;&nbsp;上级目录</button>
