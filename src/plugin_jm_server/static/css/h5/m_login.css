@@ -10,7 +10,7 @@ body {
 }
 
 body {
-  background: url(../../img/m_body-background.jpeg) no-repeat fixed bottom center;
+  background: url(../../img/m_bg.jpeg) no-repeat fixed bottom center;
   /* background-size: 100% 115%; */
   background-size: cover;
   margin: 0 auto;

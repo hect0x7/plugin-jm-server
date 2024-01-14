@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Optional
 
 import common
 from flask import Flask, abort
@@ -19,6 +20,7 @@ class JmServer:
                  default_path,
                  password,
                  current_path=None,
+                 img_overwrite: Optional[dict] = None,
                  **extra,
                  ):
         """
@@ -31,6 +33,9 @@ class JmServer:
         """
         if current_path is None:
             current_path = default_path
+
+        # 自定义背景图片，采用覆盖文件的方式
+        self.handle_img_overwrite(img_overwrite or {})
 
         # 创建项目以及初始化一些关键信息
         self.app = Flask(__name__,
@@ -253,3 +258,15 @@ class JmServer:
 
         # 监听在所有 IP 地址上
         self.app.run(**kwargs)
+
+    def handle_img_overwrite(self, img_overwrite: dict):
+        bg_dir = os.path.abspath(__file__ + '/../static/img/')
+        for orig_filename, overwrite_filepath in img_overwrite.items():
+            orig_filepath = os.path.join(bg_dir, orig_filename)
+
+            # copy overwrite_filepath to orig_filepath
+            if os.path.exists(overwrite_filepath):
+                with open(overwrite_filepath, 'rb') as f:
+                    with open(orig_filepath, 'wb') as f2:
+                        f2.write(f.read())
+                        print(f'overwrite img [{orig_filename}] -> [{overwrite_filepath}]')

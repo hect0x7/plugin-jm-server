@@ -14,9 +14,8 @@ html {
 }
 
 body {
-  background: url(../img/body-background.jpg) no-repeat fixed;
+  background: url(../img/bg.jpg) no-repeat fixed;
   background-size: cover;
-  color: white;
 }
 
 h1 {
