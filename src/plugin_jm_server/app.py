@@ -244,7 +244,7 @@ class JmServer:
         kwargs.setdefault('port', self.DEFAULT_PORT)
         # 添加路由
         self.app.add_url_rule('/jm_view', 'jm_view', self.jm_view, methods=['GET'])
-        self.app.add_url_rule("/view_file/", 'view_file', self.view_file, methods=['GET'])
+        self.app.add_url_rule("/view_file/", 'view_file', self.view_file, methods=['GET'], strict_slashes=False)
         self.app.add_url_rule('/', 'index', self.index, methods=['GET'])
         self.app.add_url_rule('/login', 'login', self.login, methods=['GET', 'POST'])
         self.app.add_url_rule('/logout', 'logout', self.logout, methods=['GET', 'POST'])
