@@ -1,3 +1,4 @@
+from urllib.parse import quote
 import os
 import time
 
@@ -21,7 +22,6 @@ class FileManager:
     def get_jm_view_images(self, path):
         images_data = []
 
-        from urllib.parse import quote
         for f in self.files_of_dir_safe(path):
             if not self.is_image_file(f):
                 continue

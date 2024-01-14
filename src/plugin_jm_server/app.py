@@ -1,3 +1,4 @@
+from urllib.parse import quote
 import os
 import re
 from typing import Optional
@@ -120,7 +121,7 @@ class JmServer:
                                data={
                                    'title': common.of_file_name(path),
                                    'images': self.file_manager.get_jm_view_images(path),
-                                   'openFromDir': openFromDir,
+                                   'openFromDir': quote(openFromDir),
                                },
                                randomArg=self.url_random_arg())
 
