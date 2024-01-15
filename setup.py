@@ -30,6 +30,7 @@ setup(
         'jmcomic',
         'flask',
         'psutil',
+        'cryptography',
     ],
     keywords=['python', 'jmcomic', '18comic', '禁漫天堂', 'NSFW'],
     classifiers=[
