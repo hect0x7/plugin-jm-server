@@ -26,10 +26,16 @@ class FileManager:
             if not self.is_image_file(f):
                 continue
             f = quote(f)
+            name = common.of_file_name(f)
+            index = int(name[:name.index('.')])
+
             images_data.append({
-                "filename": common.of_file_name(f),
-                "data_original": f'/view_file?path={f}',
+                'filename': name,
+                'data_original': f'/view_file?path={f}',
+                'index': index,
             })
+
+        images_data.sort(key=lambda item: item['index'])
 
         return images_data
 
