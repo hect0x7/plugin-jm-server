@@ -20,6 +20,7 @@ class JmServer:
     def __init__(self,
                  default_path,
                  password,
+                 ip_whitelist=None,
                  current_path=None,
                  img_overwrite: Optional[dict] = None,
                  **extra,
@@ -49,8 +50,13 @@ class JmServer:
         self.password = password
         self.file_manager = FileManager(default_path, current_path)
         self.extra = extra
+        self.ip_whitelist = ip_whitelist
 
     def verify(self):
+        ip_whitelist = self.ip_whitelist
+        if ip_whitelist is not None and request.remote_addr not in ip_whitelist:
+            abort(404)
+
         """
         验证登录状态
         """
