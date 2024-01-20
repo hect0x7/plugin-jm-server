@@ -22,12 +22,18 @@ class FileManager:
     def get_jm_view_images(self, path):
         images_data = []
 
+        give_up_sort = False
+
         for f in self.files_of_dir_safe(path):
             if not self.is_image_file(f):
                 continue
             f = quote(f)
             name = common.of_file_name(f)
-            index = int(name[:name.index('.')])
+            try:
+                index = int(name[:name.index('.')])
+            except ValueError:
+                give_up_sort = True
+                index = None
 
             images_data.append({
                 'filename': name,
@@ -35,7 +41,8 @@ class FileManager:
                 'index': index,
             })
 
-        images_data.sort(key=lambda item: item['index'])
+        if give_up_sort is False:
+            images_data.sort(key=lambda item: item['index'])
 
         return images_data
 
