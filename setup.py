@@ -47,5 +47,11 @@ setup(
         "Operating System :: Microsoft :: Windows",
     ],
     entry_points={
+    },
+    package_data={
+        "plugin_jm_server": [
+            "static/*",
+            "templates/*",
+        ],
     }
 )
