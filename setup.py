@@ -50,8 +50,8 @@ setup(
     },
     package_data={
         "plugin_jm_server": [
-            "static/*",
-            "templates/*",
+            "static/**",
+            "templates/**",
         ],
     }
 )
