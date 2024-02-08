@@ -41,7 +41,7 @@ h3 {
 }
 
 .files-table {
-  width: 820px;
+  width: 1050px;
   border-collapse: collapse;
   border: 2px solid #fff;
   border-radius: 10px;
@@ -140,7 +140,7 @@ a:visited {
 .float-tablet {
   position: fixed;
   bottom: 40px;
-  right: 400px;
+  right: 100px;
   width: 200px;
   height: 150px;
   border-radius: 15px;
@@ -186,7 +186,6 @@ a:visited {
   box-sizing: border-box;
   bottom: 250px;
   right: 40px;
-  width: 560px;
   max-height: 226px;
   padding: 20px;
   border-radius: 15px;

@@ -81,10 +81,11 @@ class FileManager:
                 continue
 
             size = self.file_size_format(size, the_type)
-            getctime = os.path.getctime(file_path)
+
             try:
+                getctime = os.path.getctime(file_path)
                 ctime = time.localtime(getctime)
-                time_str = "{}/{}/{}".format(ctime.tm_year, ctime.tm_mon, ctime.tm_mday)
+                time_str = time.strftime("%Y-%m-%d %H:%M:%S", ctime)
             except OSError:
                 continue
 
@@ -97,6 +98,7 @@ class FileManager:
             })
         self.current_path = path
 
+        files.sort(key=lambda it: it['ctime'], reverse=True)
         return files
 
     @staticmethod

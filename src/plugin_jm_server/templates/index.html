@@ -71,6 +71,21 @@
         <input type="submit">
     </form>
 
+
+    <section class="flash-tablet" style="">
+        <div class="inner-container">
+{#            <div class="drivers-container">#}
+{#                根目录：#}
+{#                {% for driver in data.drivers %}#}
+{#                <a href="javascript:" location="{{ driver }}" style="color:black">{{ driver }}</a>#}
+{#                {% endfor %}#}
+{#                <h3 class="currentPath">当前路径：<span>{{ data.currentPath }}</span></h3>#}
+{#            </div>#}
+            <button class="to-lastPath" onclick="goBack()">&nbsp;←&nbsp;&nbsp;上级目录</button>
+            <button id="to-top">返回顶部</button>
+        </div>
+    </section>
+
     <section class="float-tablet">
         <button>
             <h4><a href="/upload_file">上 传 文 件</a></h4>
@@ -78,19 +93,6 @@
         <button>
             <h4><a href="/logout">注&nbsp;&nbsp;&nbsp;&nbsp;销</a></h4>
         </button>
-    </section>
-    <section class="flash-tablet" style="">
-        <div class="inner-container">
-            <div class="drivers-container">
-                根目录：
-                {% for driver in data.drivers %}
-                <a href="javascript:" location="{{ driver }}" style="color:black">{{ driver }}</a>
-                {% endfor %}
-                <h3 class="currentPath">当前路径：<span>{{ data.currentPath }}</span></h3>
-            </div>
-            <button class="to-lastPath" onclick="goBack()">&nbsp;←&nbsp;&nbsp;上级目录</button>
-            <button id="to-top">返回顶部</button>
-        </div>
     </section>
 </div>
 </body>
