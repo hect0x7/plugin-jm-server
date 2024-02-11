@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const divid = "page_" + selectedValue;
             let element = document.getElementById(divid);
             if (element) {
-                let settop = element.offsetTop - 28 - document.getElementById('Comic_Top_Nav').offsetHeight;
+                let settop = element.offsetTop - 10 - document.getElementById('Comic_Top_Nav').offsetHeight;
                 window.scrollTo(0, settop);
             }
             document.getElementById('pageselect').value = selectedValue;
@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        console.log('toPage:', toPage)
         document.getElementById('pageselect').value = toPage;
     });
 
