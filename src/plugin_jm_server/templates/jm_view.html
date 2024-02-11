@@ -9,10 +9,10 @@
     <link href="../static/css/bootstrap.css" rel="stylesheet">
     <script src="../static/js/jquery-3.7.1.min.js"></script>
     <script src="../static/js/jquery.album-0.2.js"></script>
+    <script src="../static/js/common.js"></script>
     <link rel="stylesheet" href="../static/css/index.css">
     <link rel="stylesheet" href="../static/css/all.min.css">
     <link rel="stylesheet" href="../static/css/style_photo.css">
-    <script src="../static/js/common.js"></script>
     <style>
       img {
         width: 100%;
@@ -25,6 +25,8 @@
 <body>
 
 <div class="container">
+    <div id="Comic_Top_Nav">
+    </div>
     <div class="row">
         <div style="padding:0">
             <div class="panel panel-default">
@@ -44,7 +46,10 @@
                             </div>
                         #}
                         {% for image in data.images %}
-                            <div class="center scramble-page" id="{{ image.filename }}" >
+                            <div class="center scramble-page"
+                                 id="page_{{ loop.index0 }}"
+                                 data-page="{{ loop.index0 }}"
+                            >
                                 <img src="{{ image.data_original }}"
                                      data-original="{{ image.data_original }}"
                                      class="lazy_img img-responsive-mw lazy-loaded"
@@ -104,6 +109,16 @@
         <li>
             <a id="gobottom" href="javascript:void(0)"><i class="far fa-caret-square-up"></i><span>跳到最后</span></a>
         </li>
+        <div>
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <select id="pageselect">
+                {% for image in data.images %}
+                    <option value="{{ loop.index0 }}">
+                        {{ loop.index }}/{{ loop.length }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
     </ul>
 </div>
 
