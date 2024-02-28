@@ -1,4 +1,5 @@
 from urllib.parse import quote
+from html import unescape
 import os
 import re
 from typing import Optional
@@ -107,9 +108,9 @@ class JmServer:
             return redirect('/login')
 
         # path是要阅读的文件夹
-        path = request.args.get('path', None)
+        path = unescape(request.args.get('path', None))
         # 从哪个文件夹打开的
-        openFromDir = request.args.get('openFromDir', self.file_manager.get_current_path())
+        openFromDir = unescape(request.args.get('openFromDir', self.file_manager.get_current_path()))
 
         if path is None:
             return redirect('/')
