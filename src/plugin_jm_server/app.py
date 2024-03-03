@@ -1,3 +1,4 @@
+import threading
 from urllib.parse import quote
 from html import unescape
 import os
@@ -5,7 +6,7 @@ import re
 from typing import Optional
 
 import common
-from flask import Flask, abort
+from flask import Flask, abort, Response, stream_with_context
 from flask import render_template, send_from_directory
 from flask import request, session, redirect, flash
 
@@ -21,6 +22,7 @@ class JmServer:
     def __init__(self,
                  default_path,
                  password,
+                 jm_option=None,
                  ip_whitelist=None,
                  current_path=None,
                  img_overwrite: Optional[dict] = None,
@@ -52,6 +54,21 @@ class JmServer:
         self.file_manager = FileManager(default_path, current_path)
         self.extra = extra
         self.ip_whitelist = ip_whitelist
+        self.jm_option = jm_option
+        if jm_option is not None:
+            import queue
+            self.jm_log_msg_queue = queue.Queue()
+            self.__hook_jm_logging()
+
+    def __hook_jm_logging(self):
+        import jmcomic
+        def executor_log(topic: str, msg: str):
+            from common import format_ts, current_thread
+            msg = '[{}] [{}]:【{}】{}'.format(format_ts(), current_thread().name, topic, msg)
+            print(msg)
+            self.jm_log_msg_queue.put(msg + '<br>')
+
+        jmcomic.JmModuleConfig.executor_log = executor_log
 
     def verify(self):
         ip_whitelist = self.ip_whitelist
@@ -253,6 +270,46 @@ class JmServer:
         else:
             return redirect('/login')
 
+    def stream(self):
+        album_id = request.args.get('id', None)
+        end = f'-- END [{album_id}] --'
+
+        # 开线程调用download_album
+        threading.Thread(target=self.invoke_jmcomic_download_album, args=(album_id, end)).start()
+
+        @stream_with_context
+        def yield_download_msg():
+            while True:
+                msg = self.jm_log_msg_queue.get()
+                yield msg
+                if msg == end:
+                    break
+
+        # noinspection PyCallingNonCallable
+        return Response(yield_download_msg())
+
+    def invoke_jmcomic_download_album(self, album_id, end):
+        try:
+            import jmcomic
+        except ImportError:
+            self.jm_log_msg_queue.put('未安装 jmcomic')
+            self.jm_log_msg_queue.put(end)
+            return
+
+        try:
+
+            if self.jm_option is None:
+                self.jm_log_msg_queue.put('未配置option，使用默认值 (jmcomic.JmOption.default())')
+                op = jmcomic.JmOption.default()
+            else:
+                op = self.jm_option
+
+            op.download_album(album_id)
+        except Exception as e:
+            self.jm_log_msg_queue.put(f'下载失败: {e}')
+        finally:
+            self.jm_log_msg_queue.put(end)
+
     def run(self, **kwargs):
         kwargs.setdefault('port', self.DEFAULT_PORT)
         # 添加路由
@@ -263,7 +320,7 @@ class JmServer:
         self.app.add_url_rule('/logout', 'logout', self.logout, methods=['GET', 'POST'])
         self.app.add_url_rule("/download_file/<filename>", 'file_content', self.file_content)
         self.app.add_url_rule("/upload_file", 'upload', self.upload, methods=['GET', 'POST'])
-
+        self.app.add_url_rule("/stream", 'stream', self.stream, methods=['GET', 'POST'])
         # 监听在所有 IP 地址上
         self.app.run(**kwargs)
 
