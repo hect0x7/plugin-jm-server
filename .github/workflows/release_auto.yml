@@ -11,6 +11,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     if: startsWith(github.event.head_commit.message, 'v')
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token:
+        write
     steps:
       - uses: actions/checkout@v3
 
@@ -40,5 +44,3 @@ jobs:
 
       - name: Release PYPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
