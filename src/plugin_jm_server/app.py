@@ -64,11 +64,10 @@ class JmServer:
         import jmcomic
         def executor_log(topic: str, msg: str):
             from common import format_ts, current_thread
-            msg = '[{}] [{}]:【{}】{}'.format(format_ts(), current_thread().name, topic, msg)
-            print(msg)
-            self.jm_log_msg_queue.put(msg + '<br>')
+            msg = '[{}] [{}]:【{}】{}\n'.format(format_ts(), current_thread().name, topic, msg)
+            self.jm_log_msg_queue.put(msg)
 
-        jmcomic.JmModuleConfig.executor_log = executor_log
+        jmcomic.JmModuleConfig.EXECUTOR_LOG = executor_log
 
     def verify(self):
         ip_whitelist = self.ip_whitelist
@@ -281,12 +280,17 @@ class JmServer:
         def yield_download_msg():
             while True:
                 msg = self.jm_log_msg_queue.get()
-                yield msg
                 if msg == end:
                     break
+                yield msg
 
         # noinspection PyCallingNonCallable
-        return Response(yield_download_msg())
+        return Response(yield_download_msg(), mimetype="text/event-stream", headers={
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive'
+        })
 
     def invoke_jmcomic_download_album(self, album_id, end):
         try:

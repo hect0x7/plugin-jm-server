@@ -12,11 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.event.head_commit.message, 'v')
     permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token:
-        write
+      contents: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
