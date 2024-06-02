@@ -4,6 +4,10 @@
 
 该项目会在本地起一个`文件服务器`，支持用浏览器查看文件夹内的图片，界面模仿禁漫的章节观看页面，并适配手机端。
 
+用浏览器的好处就是支持很多浏览器插件和脚本，例如：
+
+* 双页阅读插件：https://sleazyfork.org/zh-CN/scripts/374903-comicread
+
 #  想法起源
 
 想法起源：https://github.com/hect0x7/JMComic-Crawler-Python/issues/192
