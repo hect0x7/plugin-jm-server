@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文件浏览器 V2 | 离线看本</title>
+    <!-- Use existing FontAwesome -->
+    <link rel="stylesheet" href="../static/css/all.min.css">
+    <!-- New SPA styles -->
+    <link rel="stylesheet" href="../static/css/index_spa.css?t={{ randomArg }}">
+    <!-- Dependencies -->
+    <script src="../static/js/jquery-3.7.1.min.js"></script>
+    <!-- Lazy load plugin if needed or handle manually -->
+{#    <script src="../static/js/common.js"></script> <!-- Reuse common utils if any -->#}
+</head>
+
+<body>
+    <div class="spa-container">
+        <!-- Header / Toolbar -->
+        <header class="spa-header">
+            <div class="left-controls">
+                <div class="brand">
+                    <i class="fas fa-columns"></i> <span>JM Server V2</span>
+                </div>
+                <button class="nav-btn-icon" id="btn-home" title="回到首页">
+                    <i class="fas fa-home"></i>
+                </button>
+                <div class="drivers-list">
+                    {% for driver in data.drivers %}
+                    <button class="driver-btn" onclick="navigateTo('{{ driver|replace('\\', '\\\\') }}')">{{ driver
+                        }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="middle-controls">
+                <div class="path-breadcumb" id="currentPathDisplay">
+                    {{ data.currentPath }}
+                </div>
+                <button class="action-icon" id="btn-add-bookmark" title="收藏当前目录">
+                    <i class="far fa-star"></i>
+                </button>
+            </div>
+
+            <div class="right-controls">
+                <button class="btn btn-ghost" id="btn-show-bookmarks" title="查看收藏夹">
+                    <i class="fas fa-bookmark"></i> 收藏夹
+                </button>
+                <button class="btn btn-primary" id="btn-view-album" title="以本子模式浏览当前目录">
+                     <i class="fas fa-images"></i> 看图
+                </button>
+                <a href="/" class="btn btn-outline" title="返回旧版">
+                    <i class="fas fa-undo"></i>
+                </a>
+                <button class="btn btn-primary" id="btn-refresh" title="刷新">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Bookmarks Drawer -->
+        <div class="bookmarks-overlay" id="bookmarksOverlay" style="display:none;"></div>
+        <div class="bookmarks-drawer" id="bookmarksDrawer">
+            <div class="drawer-header">
+                <span>我的收藏</span>
+                <button class="close-drawer" id="btnCloseBookmarks"><i class="fas fa-times"></i></button>
+            </div>
+            <ul class="bookmarks-list" id="bookmarksList">
+                <!-- Injected by JS -->
+            </ul>
+        </div>
+
+        <!-- Main Split View -->
+        <main class="spa-split-view">
+            <!-- Sidebar: File Navigation -->
+            <aside class="spa-sidebar" id="fileSidebar">
+                <div class="sidebar-header">
+                    <button class="nav-btn" id="btn-parent-dir" title="上级目录">
+                        <i class="fas fa-level-up-alt"></i> ..
+                    </button>
+                    <span class="sidebar-title">文件导航</span>
+                </div>
+                <div class="file-list-container">
+                    <ul class="file-list" id="fileList">
+                        <!-- Items injected by JS -->
+                        <li class="loading-state">加载中...</li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Resizer -->
+            <div class="resizer" id="dragMe"></div>
+
+            <!-- Main: Content Viewer -->
+            <section class="spa-viewer" id="mainViewer">
+                <div class="viewer-placeholder">
+                    <div class="placeholder-content">
+                        <i class="fas fa-book-open"></i>
+                        <p>请在左侧选择一个相册(本子)进行阅读</p>
+                    </div>
+                </div>
+                <!-- Images will be injected here -->
+                <div id="imageContainer" class="image-stream-container" style="display: none;">
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Init Data -->
+    <script>
+        const INITIAL_PATH = "{{ data.currentPath|replace('\\', '\\\\') }}";
+        const DEFAULT_PATH = "{{ data.defaultPath|replace('\\', '\\\\') }}";
+    </script>
+    <script src="../static/js/index_spa.js?t={{ randomArg }}"></script>
+</body>
+
+</html>

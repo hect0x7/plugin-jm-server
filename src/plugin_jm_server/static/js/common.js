@@ -10,24 +10,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 跳转到底部
-    document.getElementById('gobottom')
-        .addEventListener('click', () => {
-            window.scrollTo(0, document.body.scrollHeight);
-        });
+    let goBottom = document.getElementById('gobottom');
+    if (goBottom != null) {
+        goBottom
+            .addEventListener('click', () => {
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+    }
 
     // 选择页码跳转图片
-    document.getElementById('pageselect').addEventListener('change', function () {
-        let selectedValue = this.value;
-        if (selectedValue !== null) {
-            const divid = "page_" + selectedValue;
-            let element = document.getElementById(divid);
-            if (element) {
-                let settop = element.offsetTop - 10 - document.getElementById('Comic_Top_Nav').offsetHeight;
-                window.scrollTo(0, settop);
+    let pageSelect = document.getElementById('pageselect');
+    if (pageSelect != null) {
+        pageSelect.addEventListener('change', function () {
+            let selectedValue = this.value;
+            if (selectedValue !== null) {
+                const divid = "page_" + selectedValue;
+                let element = document.getElementById(divid);
+                if (element) {
+                    let settop = element.offsetTop - 10 - document.getElementById('Comic_Top_Nav').offsetHeight;
+                    window.scrollTo(0, settop);
+                }
+                document.getElementById('pageselect').value = selectedValue;
             }
-            document.getElementById('pageselect').value = selectedValue;
-        }
-    });
+        });
+    }
+
 
     window.addEventListener('scroll', function () {
         let wsTop = window.scrollY
@@ -45,5 +52,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pageselect').value = toPage;
     });
 
+    const lazyImages = document.querySelectorAll(".lazyload");
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.getAttribute("data-src");
+                img.classList.remove("lazyload");
+                observer.unobserve(img);
+            }
+        });
+    });
+
+    lazyImages.forEach(img => {
+        observer.observe(img);
+    });
+    document.getElementById("loadAll").addEventListener('click', function () {
+        lazyImages.forEach(img => {
+            img.src = img.getAttribute("data-src");
+            img.classList.remove("lazyload");
+        });
+    })
 
 });

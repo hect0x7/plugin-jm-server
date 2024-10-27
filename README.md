@@ -102,12 +102,28 @@ op.wait_all_plugins_finish()
 # 效果图（文件浏览、整章看图）
 
 ## 1. 电脑浏览器访问
+
+### 登录页
 ![](images/3.png)
+
+### 文件夹列表页
 ![](images/4.png)
+![](images/9.png)
+
+### 看本模式
 ![](images/5.png)
 
+### 文件夹&看本 二合一模式
+![](images/8.png)
+
 ## 2. 手机浏览器访问
+
+### 登录页
 ![](images/1.jpeg)
-![](images/2.jpeg)
+
+### 文件夹列表页
+![](images/2.png)
+
+### 看本模式
 ![](images/7.jpeg)
 

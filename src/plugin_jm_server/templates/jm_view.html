@@ -9,6 +9,8 @@
     <link href="../static/css/bootstrap.css" rel="stylesheet">
     <script src="../static/js/jquery-3.7.1.min.js"></script>
     <script src="../static/js/jquery.album-0.2.js"></script>
+{#    <script src="../static/js/jquery.photo-0.3.js"></script>#}
+{#    <script src="../static/js/jquery.lazyload-2.0.js"></script>#}
     <script src="../static/js/common.js"></script>
     <link rel="stylesheet" href="../static/css/index.css">
     <link rel="stylesheet" href="../static/css/all.min.css">
@@ -46,13 +48,15 @@
                             </div>
                         #}
                         {% for image in data.images %}
-                            <div class="center scramble-page"
+                            <div
+                                class="center scramble-page"
                                  id="page_{{ loop.index0 }}"
                                  data-page="{{ loop.index0 }}"
                             >
-                                <img src="{{ image.data_original }}"
+                                <img src=""
+                                     data-src="{{ image.data_original }}"
                                      data-original="{{ image.data_original }}"
-                                     class="lazy_img img-responsive-mw lazy-loaded"
+                                     class="lazy_img img-responsive-mw lazy-loaded lazyload"
                                 >
                             </div>
                         {% endfor %}
@@ -93,6 +97,9 @@
         {#        </li>#}
         <li style="margin-top: 15px;">
             <a href="/?path={{ data.openFromDir }}"><i class="fas fa-book"></i><span>原路返回</span></a>
+        </li>
+        <li>
+            <a id="loadAll"><i class="fas fa-download"></i><span>加载全部</span></a>
         </li>
         <li>
             <a href="https://18comic.vip/search/photos?main_tag=0&search_query={{ data.title }}">

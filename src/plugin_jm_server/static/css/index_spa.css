@@ -1,0 +1,556 @@
+:root {
+    --header-height: 50px;
+    --sidebar-width: 300px;
+    --primary-color: #3b82f6;
+    --bg-color: #f3f4f6;
+    --border-color: #e5e7eb;
+    --text-main: #1f2937;
+    --text-sec: #6b7280;
+    --hover-bg: #e5e7eb;
+    --active-bg: #dbeafe;
+    --white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-main);
+    background-color: var(--bg-color);
+    height: 100vh;
+    overflow: hidden;
+    /* Prevent body scroll, use inner scroll */
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Container */
+.spa-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Header */
+.spa-header {
+    height: var(--header-height);
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.left-controls,
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.middle-controls {
+    flex: 1;
+    margin: 0 1rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.path-breadcumb {
+    background: var(--bg-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem;
+    color: var(--text-sec);
+    border: 1px solid var(--border-color);
+    flex: 1;
+}
+
+.btn {
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-outline {
+    border-color: var(--border-color);
+    background-color: white;
+    color: var(--text-main);
+}
+
+.btn-outline:hover {
+    background-color: var(--bg-color);
+}
+
+.driver-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.driver-btn:hover {
+    background: var(--hover-bg);
+}
+
+/* Split View Main */
+.spa-split-view {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+
+/* Resizer */
+.resizer {
+    width: 6px;
+    background-color: var(--border-color);
+    cursor: col-resize;
+    transition: background 0.1s;
+    flex-shrink: 0;
+}
+
+.resizer:hover,
+.resizer.resizing {
+    background-color: var(--primary-color);
+}
+
+/* Sidebar */
+.spa-sidebar {
+    width: var(--sidebar-width);
+    min-width: 200px;
+    max-width: 50%;
+    background-color: var(--white);
+    /* border-right: 1px solid var(--border-color); */
+    /* Handled by resizer */
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f9fafb;
+}
+
+.nav-btn {
+    border: 1px solid var(--border-color);
+    background: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.nav-btn:hover {
+    background: var(--hover-bg);
+}
+
+.file-list-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.file-list {
+    list-style: none;
+    padding: 0;
+}
+
+/* Rich List Item Styles */
+.file-item {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    /* Align top for multiple lines */
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.9rem;
+    transition: background 0.1s;
+    position: relative;
+    /* For hover context */
+}
+
+.file-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.file-item.active {
+    background-color: var(--active-bg);
+    border-left: 3px solid var(--primary-color);
+}
+
+.file-thumb {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.file-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-thumb i {
+    font-size: 1.2rem;
+    color: #9ca3af;
+}
+
+.file-item[data-type="dir"] .file-thumb i {
+    color: #f59e0b;
+}
+
+.file-item[data-type="jm"] .file-thumb i {
+    color: #ef4444;
+}
+
+.file-info {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 40px;
+}
+
+.file-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-main);
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.file-meta {
+    font-size: 0.75rem;
+    color: var(--text-sec);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Hover Preview Tooltip */
+.hover-preview {
+    position: fixed;
+    z-index: 5000;
+    background: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 6px;
+    pointer-events: none;
+    /* Let clicks pass through */
+    display: none;
+    /* Hidden by default */
+    max-width: 300px;
+    max-height: 400px;
+}
+
+.hover-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    border-radius: 4px;
+}
+
+/* Main Viewer */
+.spa-viewer {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #111;
+    /* Dark background for viewing */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.viewer-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6b7280;
+}
+
+.viewer-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+/* Image Stream */
+.image-stream-container {
+    width: 100%;
+    max-width: 1000px;
+    /* Limit max width for readability */
+    min-height: 100%;
+    background-color: #000;
+}
+
+.comic-page {
+    width: 100%;
+    display: block;
+    margin: 0;
+    border: none;
+    background-color: #222;
+    /* Placeholder color */
+    min-height: 200px;
+    /* Minimum height for lazy load trigger */
+}
+
+/* Context Menu / Confirmation Modal */
+.context-menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+    display: none;
+}
+
+.context-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    padding: 0.5rem;
+    min-width: 150px;
+    z-index: 1000;
+}
+
+.context-menu-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.1s;
+    border-radius: 4px;
+}
+
+.context-menu-item:hover {
+    background-color: var(--hover-bg);
+    color: var(--primary-color);
+}
+
+/* Menu Block (Ported) */
+.menu-bolock {
+    position: fixed;
+    top: 120px;
+    right: 5%;
+    opacity: 1;
+    z-index: 100;
+}
+
+.menu-bolock li {
+    background-color: #fff;
+    margin: 3px;
+    padding: 5px;
+    text-align: center;
+    border-radius: 6px;
+    list-style: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    min-width: 60px;
+}
+
+.menu-bolock li a {
+    color: #323232;
+    text-decoration: none;
+    display: block;
+}
+
+.menu-bolock li a i {
+    color: #000;
+    font-size: 20px;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.menu-bolock li a span {
+    font-size: 10px;
+    display: block;
+}
+
+#pageselect {
+    width: 100%;
+    height: 30px;
+    margin-top: 5px;
+    border-radius: 5px;
+}
+
+/* Header New Buttons */
+.nav-btn-icon,
+.action-icon {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 10px;
+}
+
+.nav-btn-icon:hover,
+.action-icon:hover {
+    color: var(--primary-color);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: #e5e7eb;
+}
+
+/* Bookmarks Drawer */
+.bookmarks-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+}
+
+.bookmarks-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 2001;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.bookmarks-drawer.open {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+.drawer-header .close-drawer {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.bookmarks-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.bookmark-item {
+    padding: 10px 1rem;
+    border-bottom: 1px solid #f9f9f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bookmark-item:hover {
+    background: #f0fdf4;
+}
+
+.bookmark-link {
+    cursor: pointer;
+    flex: 1;
+    overflow: hidden;
+}
+
+.bookmark-path {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color);
+}
+
+.bookmark-time {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.bookmark-delete {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 5px;
+}

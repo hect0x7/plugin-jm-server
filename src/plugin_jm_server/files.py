@@ -1,6 +1,7 @@
 from urllib.parse import quote
 import os
 import time
+import re
 
 import common
 
@@ -62,44 +63,94 @@ class FileManager:
     def check_dir_can_open_jm_view(self, dirpath):
         return any(f for f in self.files_of_dir_safe(dirpath) if self.is_image_file(f))
 
+    def build_one_path_info(self, file_path, dtype=''):
+        jm_view, the_type = self.get_file_type(file_path)
+
+        name = common.of_file_name(file_path)
+
+        try:
+            size = os.path.getsize(file_path)
+        except OSError:
+            return
+
+        size = dtype if dtype != '' else self.file_size_format(size, the_type)
+
+        try:
+            getctime = os.path.getctime(file_path)
+            ctime = time.localtime(getctime)
+            time_str = time.strftime("%Y-%m-%d %H:%M:%S", ctime)
+        except OSError:
+            return
+
+        first_img_url = ''
+        if jm_view and the_type == 'dir':
+            imgs = self.get_jm_view_images(file_path)
+            if imgs:
+                first_img_url = imgs[0]
+
+        if name.endswith('.lnk'):
+            target_path = self.get_target_path(file_path)
+            return self.build_one_path_info(target_path, 'Link')
+
+        return {
+            "name": name,
+            'path': file_path,
+            'href': f'/?path={file_path}' if the_type == 'dir' else f'./download_file/{name}',
+            "size": size,
+            "ctime": time_str,
+            "type": the_type,
+            'jm_view': jm_view,
+            'first_img_url': first_img_url
+        }
+
     def get_files_data(self, path):
-        files = []
-
-        for file_path in self.files_of_dir_safe(path):
-
-            if os.path.isfile(file_path):
-                the_type = 'file'
-                jm_view = self.check_dir_can_open_jm_view(common.of_dir_path(file_path))
-            else:
-                the_type = 'dir'
-                jm_view = self.check_dir_can_open_jm_view(file_path)
-
-            name = common.of_file_name(file_path)
-            try:
-                size = os.path.getsize(file_path)
-            except OSError:
-                continue
-
-            size = self.file_size_format(size, the_type)
-
-            try:
-                getctime = os.path.getctime(file_path)
-                ctime = time.localtime(getctime)
-                time_str = time.strftime("%Y-%m-%d %H:%M:%S", ctime)
-            except OSError:
-                continue
-
-            files.append({
-                "name": name,
-                "size": size,
-                "ctime": time_str,
-                "type": the_type,
-                'jm_view': jm_view
-            })
+        files = list(filter(bool, map(self.build_one_path_info, self.files_of_dir_safe(path))))
         self.current_path = path
-
-        files.sort(key=lambda it: it['ctime'], reverse=True)
+        files = self.sort_files(files)
         return files
+
+    def sort_files(self, files: list):
+        def natural_key(item):
+            return [int(text) if text.isdigit() else text.lower()
+                    for text in re.split(r'(\d+)', item['name'])]
+
+        # Split into groups
+        jm_albums = []
+        other_dirs = []
+        other_files = []
+
+        for f in files:
+            if f['jm_view']:
+                jm_albums.append(f)
+            elif f['type'] == 'dir':
+                other_dirs.append(f)
+            else:
+                other_files.append(f)
+
+        # Sort each group
+        jm_albums.sort(key=natural_key)
+        other_dirs.sort(key=natural_key)
+        other_files.sort(key=natural_key)
+
+        return jm_albums + other_dirs + other_files
+
+    def get_file_type(self, file_path):
+        if os.path.isfile(file_path):
+            the_type = 'file'
+            jm_view = self.check_dir_can_open_jm_view(common.of_dir_path(file_path))
+        else:
+            the_type = 'dir'
+            jm_view = self.check_dir_can_open_jm_view(file_path)
+        return jm_view, the_type
+
+    @staticmethod
+    def get_target_path(lnk_path: str) -> str:
+        try:
+            import pylnk3
+            lnk = pylnk3.parse(lnk_path)
+            return lnk.path.replace("\\", '/').replace("//", '/')  # 获取目标文件/文件夹路径
+        except Exception as e:
+            return lnk_path
 
     @staticmethod
     def file_size_format(size, the_type):

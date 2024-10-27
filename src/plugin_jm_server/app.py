@@ -8,7 +8,7 @@ from typing import Optional
 import common
 from flask import Flask, abort, Response, stream_with_context
 from flask import render_template, send_from_directory
-from flask import request, session, redirect, flash
+from flask import request, session, redirect, flash, jsonify
 
 from .files import FileManager
 
@@ -22,10 +22,12 @@ class JmServer:
     def __init__(self,
                  default_path,
                  password,
+                 *,
                  jm_option=None,
                  ip_whitelist=None,
                  current_path=None,
                  img_overwrite: Optional[dict] = None,
+                 env=None,
                  **extra,
                  ):
         """
@@ -59,6 +61,9 @@ class JmServer:
             import queue
             self.jm_log_msg_queue = queue.Queue()
             self.__hook_jm_logging()
+        if env:
+            for k, v in env.items():
+                os.environ[k] = v
 
     def __hook_jm_logging(self):
         import jmcomic
@@ -77,7 +82,7 @@ class JmServer:
         """
         验证登录状态
         """
-        if session.get('password', None) == self.password:
+        if (self.password == '') or session.get('password', None) == self.password:
             return True
         else:
             return False
@@ -112,9 +117,75 @@ class JmServer:
         """
         url添加一个随机参数，防止浏览器缓存
         """
-        # from random import randint
-        # return randint(100000, 1000000)
-        return 0
+        from random import randint
+        return randint(100000, 1000000)
+
+    def spa_view(self):
+        """
+        [New] V2 SPA Interface (PC Only)
+        """
+        if not self.verify():
+            return redirect('/login')
+
+        # 获取路径参数，如果为空则使用默认路径
+        path = request.args.get('path', None)
+        if path is None:
+            path = self.file_manager.default_path
+
+        path = os.path.abspath(path)
+        path = common.fix_filepath(path)
+
+        if common.file_not_exists(path):
+            return abort(404)
+
+        return render_template('index_spa.html',
+                               data={
+                                   'currentPath': path,
+                                   'defaultPath': self.file_manager.default_path,
+                                   'drivers': self.file_manager.DRIVERS_LIST
+                               },
+                               randomArg=self.url_random_arg())
+
+    def api_list_files(self):
+        """
+        [New] API: List files in directory
+        """
+        if not self.verify():
+            return abort(403)
+
+        path = request.args.get('path', self.file_manager.default_path)
+        path = os.path.abspath(path)
+        path = common.fix_filepath(path)
+
+        if common.file_not_exists(path):
+            return jsonify({'error': 'Path not found'}), 404
+
+        files_data = self.file_manager.get_files_data(path)
+        return jsonify({
+            'currentPath': path,
+            'files': files_data
+        })
+
+    def api_album_images(self):
+        """
+        [New] API: Get images for an album
+        """
+        if not self.verify():
+            return abort(403)
+
+        path = request.args.get('path', None)
+        if not path:
+            return jsonify({'error': 'Path required'}), 400
+
+        path = os.path.abspath(path)
+        if common.file_not_exists(path):
+            return jsonify({'error': 'Path not found'}), 404
+
+        images = self.file_manager.get_jm_view_images(path)
+        return jsonify({
+            'title': common.of_file_name(path),
+            'images': images
+        })
 
     def jm_view(self):
         """
@@ -189,6 +260,7 @@ class JmServer:
                                    "files": self.file_manager.get_files_data(path),
                                    "drivers": self.file_manager.DRIVERS_LIST,
                                    "currentPath": path,
+                                   "defaultPath": self.file_manager.default_path
                                },
                                randomArg=self.url_random_arg())
 
@@ -314,8 +386,14 @@ class JmServer:
         finally:
             self.jm_log_msg_queue.put(end)
 
-    def run(self, **kwargs):
-        kwargs.setdefault('port', self.DEFAULT_PORT)
+    def open_directory(self, directory):
+        path = os.path.abspath(directory)
+        # os.startfile(path)  # Windows特有，打开文件夹
+        import subprocess
+        subprocess.Popen(f'explorer /select,"{path}"')
+        return ''
+
+    def register_routes(self):
         # 添加路由
         self.app.add_url_rule('/jm_view', 'jm_view', self.jm_view, methods=['GET'])
         self.app.add_url_rule("/view_file/", 'view_file', self.view_file, methods=['GET'], strict_slashes=False)
@@ -323,8 +401,18 @@ class JmServer:
         self.app.add_url_rule('/login', 'login', self.login, methods=['GET', 'POST'])
         self.app.add_url_rule('/logout', 'logout', self.logout, methods=['GET', 'POST'])
         self.app.add_url_rule("/download_file/<filename>", 'file_content', self.file_content)
+        self.app.add_url_rule('/open/<path:directory>', 'open_directory', self.open_directory)
         self.app.add_url_rule("/upload_file", 'upload', self.upload, methods=['GET', 'POST'])
         self.app.add_url_rule("/stream", 'stream', self.stream, methods=['GET', 'POST'])
+
+        # [New] SPA Routes
+        self.app.add_url_rule("/spa", 'spa_view', self.spa_view, methods=['GET'])
+        self.app.add_url_rule("/api/list_files", 'api_list_files', self.api_list_files, methods=['GET'])
+        self.app.add_url_rule("/api/album_images", 'api_album_images', self.api_album_images, methods=['GET'])
+
+    def run(self, **kwargs):
+        kwargs.setdefault('port', self.DEFAULT_PORT)
+        self.register_routes()
         # 监听在所有 IP 地址上
         self.app.run(**kwargs)
 

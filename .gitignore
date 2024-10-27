@@ -1,2 +1,5 @@
 .idea
 /usage
+**/*.egg-info
+**/__pycache__
+/test-dic-root
