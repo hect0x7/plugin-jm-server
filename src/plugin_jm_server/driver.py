@@ -1,4 +1,5 @@
 import os
+import re
 
 
 def get_winDriver():
@@ -23,11 +24,11 @@ def get_winDriver():
             driver_list[i] = driver_name
             i += 1
         except PermissionError as e:
-            if '[WinError 21]' in str(e):
-                del driver_list[i]
-            # 异常类型不为 “设备未就绪” 的再次抛出异常供调试
-            else:
-                raise (PermissionError, e)
+            del driver_list[i]
+            mobj = re.match(r'\[WinError (\d+)\]', str(e))
+            # ERROR_NOT_READY, ERROR_ACCESS_DENIED
+            if mobj is not None and mobj.group(1) not in {'21', '5'}:
+                print(f'Drive {driver_name} unexpectedly unavailable: {e}')
         finally:
             num -= 1
 
