@@ -12,7 +12,8 @@
     <!-- Dependencies -->
     <script src="../static/js/jquery-3.7.1.min.js"></script>
     <!-- Lazy load plugin if needed or handle manually -->
-{#    <script src="../static/js/common.js"></script> <!-- Reuse common utils if any -->#}
+    {#
+    <script src="../static/js/common.js"></script> <!-- Reuse common utils if any -->#}
 </head>
 
 <body>
@@ -35,8 +36,10 @@
             </div>
 
             <div class="middle-controls">
-                <div class="path-breadcumb" id="currentPathDisplay">
-                    {{ data.currentPath }}
+                <div class="path-input-wrapper">
+                    <input type="text" class="path-breadcumb" id="currentPathDisplay" value="{{ data.currentPath }}"
+                        autocomplete="off">
+                    <ul class="autocomplete-dropdown" id="pathSuggestions" style="display:none;"></ul>
                 </div>
                 <button class="action-icon" id="btn-add-bookmark" title="收藏当前目录">
                     <i class="far fa-star"></i>
@@ -48,7 +51,7 @@
                     <i class="fas fa-bookmark"></i> 收藏夹
                 </button>
                 <button class="btn btn-primary" id="btn-view-album" title="以本子模式浏览当前目录">
-                     <i class="fas fa-images"></i> 看图
+                    <i class="fas fa-images"></i> 看图
                 </button>
                 <a href="/" class="btn btn-outline" title="返回旧版">
                     <i class="fas fa-undo"></i>
@@ -109,8 +112,8 @@
 
     <!-- Init Data -->
     <script>
-        const INITIAL_PATH = "{{ data.currentPath|replace('\\', '\\\\') }}";
-        const DEFAULT_PATH = "{{ data.defaultPath|replace('\\', '\\\\') }}";
+        const INITIAL_PATH = "{{ data.currentPath|replace('\\', '\\\\')|safe }}";
+        const DEFAULT_PATH = "{{ data.defaultPath|replace('\\', '\\\\')|safe }}";
     </script>
     <script src="../static/js/index_spa.js?t={{ randomArg }}"></script>
 </body>

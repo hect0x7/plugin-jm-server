@@ -187,6 +187,19 @@ class JmServer:
             'images': images
         })
 
+    def api_open_file(self):
+        """
+        [New] API: Open file/folder in Explorer
+        """
+        if not self.verify():
+            return abort(403)
+            
+        path = request.args.get('path', None)
+        if not path:
+           return jsonify({'error': 'Path required'}), 400
+           
+        return self.open_directory(path) or jsonify({'status': 'ok'})
+
     def jm_view(self):
         """
         以禁漫章节的模式观看指定文件夹下的图片
@@ -409,6 +422,7 @@ class JmServer:
         self.app.add_url_rule("/spa", 'spa_view', self.spa_view, methods=['GET'])
         self.app.add_url_rule("/api/list_files", 'api_list_files', self.api_list_files, methods=['GET'])
         self.app.add_url_rule("/api/album_images", 'api_album_images', self.api_album_images, methods=['GET'])
+        self.app.add_url_rule("/api/open_file", 'api_open_file', self.api_open_file, methods=['GET'])
 
     def run(self, **kwargs):
         kwargs.setdefault('port', self.DEFAULT_PORT)

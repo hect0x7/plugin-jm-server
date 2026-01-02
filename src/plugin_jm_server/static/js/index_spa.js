@@ -30,6 +30,262 @@ $(document).ready(function () {
     $('#btn-home').click(() => loadDirectory(DEFAULT_PATH));
     $('#btn-view-album').click(() => loadAlbum(currentPath));
 
+    // Path Input Navigation & Autocomplete
+    const $pathInput = $('#currentPathDisplay');
+    const $suggestions = $('#pathSuggestions');
+    let suggestionDebounce;
+    let cachedDir = null;
+    let cachedFiles = [];
+
+    $pathInput.on('keydown', function (e) {
+        const $items = $suggestions.find('li');
+        let activeIdx = $items.index($items.filter('.active'));
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if ($items.length > 0) {
+                if (activeIdx < $items.length - 1) activeIdx++;
+                else activeIdx = 0; // Cycle to top
+
+                $items.removeClass('active');
+                const $active = $items.eq(activeIdx).addClass('active');
+                // Scroll into view if needed
+                if ($active.length) {
+                    $active[0].scrollIntoView({ block: 'nearest' });
+                }
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if ($items.length > 0) {
+                if (activeIdx > 0) activeIdx--;
+                else activeIdx = $items.length - 1; // Cycle to bottom
+
+                $items.removeClass('active');
+                const $active = $items.eq(activeIdx).addClass('active');
+                if ($active.length) {
+                    $active[0].scrollIntoView({ block: 'nearest' });
+                }
+            }
+        } else if (e.key === 'Enter') {
+            // Check if an item is active
+            if (activeIdx !== -1) {
+                e.preventDefault();
+                // Trigger click on the ACTIVE item
+                $items.eq(activeIdx).trigger('click');
+                return;
+            }
+
+            const path = $(this).val();
+            if (path) {
+                $suggestions.hide();
+                $(this).blur();
+                loadDirectory(path);
+            }
+        }
+    });
+
+    $pathInput.on('input focus', function () {
+        const val = $(this).val();
+        clearTimeout(suggestionDebounce);
+
+        suggestionDebounce = setTimeout(() => {
+            handleAutocomplete(val);
+        }, 300);
+    });
+
+    // Hide when clicking outside
+    $(document).on('click', function (e) {
+        if (!$.contains($('.path-input-wrapper')[0], e.target)) {
+            $suggestions.hide();
+        }
+    });
+
+    function handleAutocomplete(inputVal) {
+        if (!inputVal) {
+            $suggestions.hide();
+            return;
+        }
+
+        // Determine parent dir and query
+        // Handle Windows and Unix separators
+        const sep = inputVal.includes('/') ? '/' : '\\';
+        let parentDir, query;
+
+        // E.g. "D:\Downloads\Ani"
+        const lastSepIndex = Math.max(inputVal.lastIndexOf('/'), inputVal.lastIndexOf('\\'));
+
+        if (lastSepIndex === -1) {
+            // Treat specific drive letters like 'C:'
+            if (inputVal.endsWith(':')) {
+                parentDir = inputVal + '\\';
+                query = '';
+            } else {
+                // No separator? Maybe root or just typing name?
+                // Assume relative to nothing? Hard to say. 
+                // Let's assume we need to list drives or fail.
+                // For safety, if length > 1 and looks like drive:
+                if (/^[a-zA-Z]:$/.test(inputVal)) {
+                    parentDir = inputVal + '\\';
+                    query = '';
+                } else {
+                    $suggestions.hide();
+                    return;
+                }
+            }
+        } else {
+            parentDir = inputVal.substring(0, lastSepIndex);
+            // Handle root case "D:\" -> parent is "D:" which is weird in some APIs, 
+            // but usually "D:\" is better.
+            if (parentDir.endsWith(':')) parentDir += sep;
+
+            // If input is exactly "D:\" then query is empty
+            if (lastSepIndex === inputVal.length - 1) {
+                query = '';
+                // Fix parentDir to include the slash if it was stripped?
+                // Actually substring(0, index) excludes slash.
+                // So for "D:\" -> parent "D:", query ""
+                parentDir = inputVal.substring(0, lastSepIndex + 1);
+            } else {
+                query = inputVal.substring(lastSepIndex + 1).toLowerCase();
+                parentDir = inputVal.substring(0, lastSepIndex + 1);
+            }
+        }
+
+        // Fetch if needed
+        if (cachedDir !== parentDir) {
+            $.ajax({
+                url: '/api/list_files',
+                data: { path: parentDir },
+                method: 'GET',
+                success: function (res) {
+                    cachedDir = parentDir;
+                    // Filter only dirs
+                    cachedFiles = (res.files || []).filter(f => f.type === 'dir' || f.type === 'jm');
+                    renderSuggestions(cachedFiles, query, parentDir);
+                },
+                error: function () {
+                    // Fail silently or clear
+                    cachedFiles = [];
+                    cachedDir = null;
+                }
+            });
+        } else {
+            renderSuggestions(cachedFiles, query, parentDir);
+        }
+    }
+
+    function renderSuggestions(files, query, parentPath) {
+        // Files are children of parentPath. 
+        // If the user has typed a valid path that equals parentPath (so query is empty), we should offer a way to "Confirm/Go" to parentPath.
+        // OR if the user is typing, we show children.
+
+        const matches = files.filter(f => f.name.toLowerCase().startsWith(query));
+
+        $suggestions.empty();
+
+        // 1. Confirm Option (Only if we are likely at a valid path or user wants to submit current input)
+        // logic: if query is empty, it means input ends with slash (likely a dir). 
+        // We can add a "Go to <parentPath>" item.
+        if (query === '' && parentPath) {
+            // Only show confirm if the path in input is NOT different from currentPath (meaning user hasn't moved yet)
+            const inputVal = $pathInput.val();
+
+            // Utility to decode HTML entities (e.g. for paths with special chars)
+            const decodeHtml = (html) => {
+                const txt = document.createElement("textarea");
+                txt.innerHTML = html;
+                return txt.value;
+            };
+
+            // Normalize slashes for comparison
+            const normInput = inputVal.replace(/[\\/]+$/, '').replace(/\\/g, '/');
+            // Decode currentPath 
+            const decodedCurrent = decodeHtml(currentPath);
+            const normCurrent = decodedCurrent.replace(/[\\/]+$/, '').replace(/\\/g, '/');
+
+            // console.log(normInput, normCurrent); 
+
+            if (normInput !== normCurrent) {
+                const $start = $(`
+                    <li class="autocomplete-item confirm-item" data-path="${parentPath}">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                        <span>确认</span>
+                    </li>
+                `);
+                $start.on('mousedown click', function (e) {
+                    e.preventDefault();
+                    if ($pathInput) $pathInput.blur(); // Focus away
+                    loadDirectory(parentPath);
+                    $suggestions.hide();
+                });
+                $suggestions.append($start);
+            }
+        }
+
+        // Always show ".." to go up, if we are not at root (logic could be refined but always showing is safe enough)
+        // Only show if query doesn't conflict with it significantly? 
+        // Actually best to show it if matches is empty OR if query is empty or starts with '.'
+        // Let's just prepend it if parentPath has a parent.
+
+        let parentOfParent = null;
+        if (parentPath) {
+            const sep = parentPath.includes('/') ? '/' : '\\';
+            // parentPath usually ends with slash due to handleAutocomplete logic
+            let clean = parentPath;
+            if (clean.endsWith(sep)) clean = clean.slice(0, -1);
+
+            const lastSep = Math.max(clean.lastIndexOf('/'), clean.lastIndexOf('\\'));
+            if (lastSep > 0) {
+                parentOfParent = clean.substring(0, lastSep + 1);
+            } else if (clean.endsWith(':')) {
+                // Root drive, no parent usually
+            }
+        }
+
+        if (parentOfParent && (query === '' || '..'.startsWith(query))) {
+            const $li = $(`
+                <li class="autocomplete-item">
+                    <i class="fas fa-level-up-alt" style="color: #6b7280;"></i>
+                    <span>..</span>
+                </li>
+            `);
+            $li.click(function () {
+                $pathInput.val(parentOfParent);
+                $pathInput.focus();
+                $suggestions.hide();
+                handleAutocomplete(parentOfParent);
+            });
+            $suggestions.append($li);
+        }
+
+        if (matches.length === 0 && $suggestions.children().length === 0) {
+            $suggestions.hide();
+            return;
+        }
+
+        matches.slice(0, 10).forEach(f => {
+            const $li = $(`
+                <li class="autocomplete-item">
+                    <i class="fas fa-folder"></i>
+                    <span>${f.name}</span>
+                </li>
+            `);
+
+            $li.click(function () {
+                let newVal = f.path;
+
+                // Direct navigation as requested
+                $pathInput.val(newVal);
+                if ($pathInput) $pathInput.blur(); // Focus away
+                $suggestions.hide();
+                loadDirectory(newVal);
+            });
+            $suggestions.append($li);
+        });
+
+        $suggestions.show();
+    }
+
     // Bookmark Events
     $('#btn-add-bookmark').click(() => toggleCurrentBookmark());
     $('#btn-show-bookmarks').click(() => showBookmarksDrawer());
@@ -396,6 +652,9 @@ $(document).ready(function () {
                     <a href="javascript:void(0)" id="menuLoadAll"><i class="fas fa-download"></i><span>加载全部</span></a>
                 </li>
                 <li>
+                    <a href="javascript:void(0)" id="menuOpenExplorer"><i class="fas fa-folder-open"></i><span>打开文件夹</span></a>
+                </li>
+                <li>
                     <a href="javascript:void(0)" id="menuTop"><i class="far fa-caret-square-up"></i><span>回到顶端</span></a>
                 </li>
                 <li>
@@ -422,6 +681,21 @@ $(document).ready(function () {
 
         // Menu Handlers
         $('#menuToggle').click(() => $menu.hide());
+
+        $('#menuOpenExplorer').click(() => {
+            $.ajax({
+                url: '/api/open_file',
+                data: { path: currentPath },
+                method: 'GET',
+                success: function (res) {
+                    // Feedback?
+                    // console.log('Opened');
+                },
+                error: function (err) {
+                    console.error('Failed to open explorer', err);
+                }
+            });
+        });
 
         $('#menuLoadAll').click(() => {
             // Load all remaining images
@@ -484,7 +758,14 @@ $(document).ready(function () {
 
     /* Utils */
     function updateBreadcrumb(path) {
-        $('#currentPathDisplay').text(path);
+        // Decode entities just in case backend returned them encoded
+        const decodeHtml = (html) => {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        };
+
+        $('#currentPathDisplay').val(decodeHtml(path));
     }
 
     function resetViewer() {
