@@ -1,5 +1,36 @@
 """Reader source-level contracts and pure JavaScript algorithm checks."""
 from pathlib import Path
+import subprocess
+
+
+def test_cached_image_classification_waits_for_reader_modules():
+    root = Path(__file__).resolve().parents[1]
+    script = r"""
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('src/jm_view_server/static/js/reader-modes.js','utf8');
+const start=source.indexOf('function scheduleDoubleGroupRebuild()');
+const end=source.indexOf("stream.addEventListener('load'",start);
+const timers=[];let rebuilds=0;
+const context={readerInitialized:false,doubleRebuildTimer:null,activePageIndex:0,
+ clearTimeout(){},setTimeout(fn){timers.push(fn);return timers.length},
+ rebuildDoubleGroups(){rebuilds++}};
+vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+const image={naturalWidth:1200,naturalHeight:800,dataset:{}};
+context.updateImagePageType(image);
+assert.equal(image.dataset.readerWide,'1');assert.equal(timers.length,0);
+context.readerInitialized=true;
+image.naturalWidth=600;context.updateImagePageType(image);
+assert.equal(image.dataset.readerWide,'0');assert.equal(timers.length,1);
+timers[0]();assert.equal(rebuilds,1);
+context.readerInitialized=false;
+const prefs=fs.readFileSync('src/jm_view_server/static/js/reader-preferences.js','utf8');
+vm.runInContext(prefs.slice(prefs.indexOf('function checkTouchBottom()'),prefs.indexOf('function showJumpCountdown()')),context);
+vm.runInContext(prefs.slice(prefs.indexOf('function loadNextAlbum()'),prefs.indexOf('function appendNextAlbumData')),context);
+context.checkTouchBottom();context.loadNextAlbum();
+const controls=fs.readFileSync('src/jm_view_server/static/js/reader-controls.js','utf8');
+assert.ok(controls.indexOf('readerInitialized = true;')<controls.indexOf('setReaderMode(readerMode, { persist: false, initial: true })'));
+"""
+    subprocess.run(['node', '-e', script], cwd=root, check=True, capture_output=True, text=True)
 
 
 READER_JS_FILES = (
@@ -7,6 +38,8 @@ READER_JS_FILES = (
     'reader-preferences.js',
     'reader-modes.js',
     'reader-contact-sheet.js',
+    'reader-image-actions.js',
+    'reader-favorites.js',
     'reader-controls.js',
 )
 READER_CSS_FILES = (
@@ -15,6 +48,7 @@ READER_CSS_FILES = (
     'reader-toolbar.css',
     'reader-contact-sheet.css',
     'reader-extras.css',
+    'reader-image-actions.css',
 )
 
 
@@ -278,6 +312,78 @@ def test_mobile_reader_uses_dynamic_viewport_and_touch_sized_sheet_controls():
     assert '悬停或触屏操作可插入空白页' in reader_html
     assert reader_js.count("case 'ArrowUp':") == 1
     assert reader_js.count("case 't': case 'T':") == 1
+
+
+def test_mobile_double_layout_preserves_spreads_and_blank_slots():
+    root = Path(__file__).resolve().parents[1]
+    reader_js, reader_css = _reader_sources(root)
+    reader_html = (root / 'src/jm_view_server/templates/jm_view.html').read_text(encoding='utf-8')
+
+    # Phone width must not override the logical slots assigned by shared grouping.
+    assert 'grid-row: auto !important; grid-column: 1 !important;' not in reader_css
+    assert '.reader-double-slot.is-blank { display: none; }' not in reader_css
+    assert 'grid-template-columns: repeat(2, minmax(0, 1fr));' in reader_css
+    assert 'minmax(min(100%, 260px), 1fr)' in reader_css
+    assert 'min-height: 45vw' not in reader_css
+    assert 'position: absolute; inset: 0; overflow: auto;' in reader_css
+    assert 'is-inserted.is-empty-spread { aspect-ratio: 2 / 3; }' in reader_css
+    assert 'group.beforePage, group.pages.length === 0' in reader_js
+    assert "readerGridDoublePreview.setAttribute('aria-pressed', isGridDoublePreview ? 'true' : 'false')" in reader_js
+    assert 'title="切换缩略图双页对开排版预览" aria-pressed="false"' in reader_html
+
+
+def test_contact_sheet_loaded_thumbnail_updates_shared_page_type():
+    import subprocess
+    root = Path(__file__).resolve().parents[1]
+    reader_js, _ = _reader_sources(root)
+    page_type_function = reader_js[
+        reader_js.index('function updateImagePageType('):
+        reader_js.index("stream.addEventListener('load'")
+    ]
+    refresh_functions = reader_js[
+        reader_js.index('function flushReaderGridTypeRefresh('):
+        reader_js.index('function requestReaderGridTypeRefresh(')
+    ]
+    script = """
+const assert = require('node:assert/strict');
+let groupingUpdates = 0, gridRequests = 0;
+function scheduleDoubleGroupRebuild() { groupingUpdates++; }
+function requestReaderGridTypeRefresh() { gridRequests++; }
+""" + page_type_function + """
+const source = {dataset: {readerWide: '0'}, naturalWidth: 1, naturalHeight: 1};
+const landscapeThumbnail = {naturalWidth: 960, naturalHeight: 600};
+updateImagePageType(source, landscapeThumbnail);
+assert.equal(source.dataset.readerWide, '1');
+assert.equal(groupingUpdates, 1);
+assert.equal(gridRequests, 1);
+updateImagePageType(source, landscapeThumbnail);
+assert.equal(groupingUpdates, 1);
+assert.equal(gridRequests, 1);
+updateImagePageType(source, {naturalWidth: 480, naturalHeight: 720});
+assert.equal(source.dataset.readerWide, '0');
+assert.equal(gridRequests, 2);
+let readerGridTypeRefreshPending = true, pointerDragState = {}, draggedSeqIndex = null;
+let isGridDoublePreview = true, builds = 0;
+const readerGridOverlay = {classList: {contains: () => true}};
+const readerGrid = {scrollTop: 240};
+function rebuildReaderGrid() { builds++; readerGrid.scrollTop = 0; }
+""" + refresh_functions + """
+flushReaderGridTypeRefresh();
+assert.equal(builds, 0);
+assert.equal(readerGridTypeRefreshPending, true);
+pointerDragState = null;
+draggedSeqIndex = 1;
+flushReaderGridTypeRefresh();
+assert.equal(builds, 0);
+draggedSeqIndex = null;
+flushReaderGridTypeRefresh();
+assert.equal(builds, 1);
+assert.equal(readerGrid.scrollTop, 240);
+assert.equal(readerGridTypeRefreshPending, false);
+flushReaderGridTypeRefresh();
+assert.equal(builds, 1);
+"""
+    subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)
 
 
 def test_reader_open_folder_and_fullscreen_feedback_static_contract():

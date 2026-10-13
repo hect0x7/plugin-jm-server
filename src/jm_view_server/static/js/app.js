@@ -503,7 +503,7 @@ function showJmvOnboarding(force) {
       <h2 id="onboardingTitle">新的阅读方式，先看这三件事</h2>
       <div class="onboarding-steps">
         <div><span>01</span><b>设置集中管理</b><p>在设置页提前选择外观、默认阅读模式、图片大小和自动连播。</p></div>
-        <div><span>02</span><b>三种阅读布局</b><p>单页模式点击两侧翻页；双页模式在桌面端每行两页，窄屏自动单列并连续滚动。</p></div>
+        <div><span>02</span><b>三种阅读布局</b><p>单页模式点击两侧翻页；双页模式在电脑与手机上均按左右对开连续阅读，横图自动跨页。</p></div>
         <div><span>03</span><b>快捷键随时可查</b><p>方向键翻页，按 M 切换模式，按 ? 打开完整快捷键帮助。</p></div>
       </div>
       <div class="onboarding-actions">
@@ -541,3 +541,61 @@ function copyAddr(text) {
   else toast('已复制：' + t, 'success');
 }
 window.copyAddr = copyAddr;
+
+/* ---------- 系统缩略图的有界重试 ---------- */
+(function () {
+  var attempts = new WeakMap();
+  var timers = new Map();
+  var resumeImages = new Set();
+  var leaving = false;
+  window.JmvRetrySystemThumbnail = function (img) {
+    img.hidden = true;
+    if (img.parentElement) img.parentElement.classList.add('thumbnail-failed');
+    var source = img.getAttribute('src');
+    if (!source || leaving || !img.isConnected) return;
+    var state = attempts.get(img);
+    if (!state) {
+      state = { count: 0, timer: null, img: img };
+      attempts.set(img, state);
+      img.addEventListener('load', function () {
+        if (state.timer !== null) {
+          clearTimeout(state.timer);
+          timers.delete(state.timer);
+          state.timer = null;
+        }
+        img.hidden = false;
+        if (img.parentElement) img.parentElement.classList.remove('thumbnail-failed');
+      });
+    }
+    if (state.count >= 2 || state.timer !== null) return;
+    state.count += 1;
+    state.timer = setTimeout(function () {
+      timers.delete(state.timer);
+      state.timer = null;
+      if (leaving || !img.isConnected || img.getAttribute('src') !== source ||
+          !img.parentElement || !img.parentElement.getClientRects().length) return;
+      img.removeAttribute('src');
+      img.src = source;
+    }, state.count * 1000);
+    timers.set(state.timer, state);
+  };
+  window.addEventListener('pagehide', function () {
+    leaving = true;
+    timers.forEach(function (state, timer) {
+      clearTimeout(timer);
+      state.timer = null;
+      state.count -= 1;
+      resumeImages.add(state.img);
+    });
+    timers.clear();
+  });
+  window.addEventListener('pageshow', function () {
+    leaving = false;
+    resumeImages.forEach(function (img) {
+      if (img.isConnected && img.parentElement && img.parentElement.getClientRects().length) {
+        window.JmvRetrySystemThumbnail(img);
+      }
+    });
+    resumeImages.clear();
+  });
+})();

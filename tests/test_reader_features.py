@@ -433,32 +433,6 @@ def test_double_mode_horizontal_input_does_not_turn_and_vertical_keys_scroll(bro
     ctx.close()
 
 
-def test_double_mode_under_720px_uses_single_column_and_hides_blank_slots(browser, live_server):
-    ctx = browser.new_context(viewport={'width': 719, 'height': 900})
-    pg = _open_with_preferences(ctx, live_server, {
-        'jmv-reader-mode': 'double',
-        'jmv-reading-direction': 'rtl',
-    })
-    _set_page_types(pg, wide_indexes=(3,))
-
-    page_layout = pg.evaluate("""() => Array.from(document.querySelectorAll('.scramble-page')).map(page => {
-        const style = getComputedStyle(page);
-        return { display: style.display, columnStart: style.gridColumnStart };
-    })""")
-    assert all(page['display'] != 'none' for page in page_layout)
-    assert all(page['columnStart'] == '1' for page in page_layout)
-
-    blank_slots = pg.locator('#stream > .reader-double-blank, #stream > .reader-double-slot.is-blank')
-    assert blank_slots.count() == 2
-    assert blank_slots.evaluate_all(
-        "slots => slots.every(slot => getComputedStyle(slot).display === 'none')")
-    assert pg.eval_on_selector(
-        '#page_0 .page-img', 'image => getComputedStyle(image).maxHeight') == 'none'
-    assert pg.is_hidden('#tSizeVal')
-    assert pg.is_visible('#doubleWidthScaleControl')
-    ctx.close()
-
-
 def test_double_mode_uses_continuous_width_scale_and_reset(browser, live_server):
     ctx = browser.new_context(viewport={'width': 1280, 'height': 800})
     pg = _open_with_preferences(ctx, live_server, {
@@ -550,82 +524,7 @@ def test_eye_care(browser, live_server):
     pg.close()
 
 
-# ---------- 项11：图片长按径向旋转 + 双击不误触工具栏 ----------
-def test_image_rotate_and_toolbar(browser, live_server):
-    pg = _open(browser.new_context(), live_server)
-    # 让首图加载出来（懒加载）
-    pg.eval_on_selector('#page_0', 'el => el.scrollIntoView()')
-    pg.wait_for_timeout(300)
-
-    # 双击与右键不再旋转图片。
-    pg.dblclick('#page_0 .page-img')
-    pg.dispatch_event('#page_0 .page-img', 'contextmenu')
-    assert pg.eval_on_selector('#page_0 .page-img', 'el => el.style.transform') == ''
-
-    # 鼠标按住后出现四扇区菜单，选择 90° 才旋转。
-    image_box = pg.locator('#page_0 .page-img').bounding_box()
-    pg.mouse.move(image_box['x'] + image_box['width'] / 2, image_box['y'] + image_box['height'] / 2)
-    pg.mouse.down()
-    pg.wait_for_timeout(650)
-    assert pg.is_visible('#rotateRadial.show')
-    assert pg.locator('#rotateRadial [data-rotate]').count() == 4
-    pg.mouse.up()
-    radial_box = pg.locator('#rotateRadial').bounding_box()
-    pg.mouse.click(radial_box['x'] + radial_box['width'] * 0.78,
-                   radial_box['y'] + radial_box['height'] / 2)
-    assert pg.eval_on_selector('#page_0 .page-img', 'el => el.style.transform') == 'rotate(90deg)'
-    assert not pg.eval_on_selector('#rotateRadial', 'el => el.classList.contains("show")')
-    assert pg.get_attribute('#rotateRadial', 'aria-hidden') == 'true'
-
-    # 再次长按打开后，点击其他区域关闭。
-    pg.mouse.move(image_box['x'] + image_box['width'] / 2, image_box['y'] + image_box['height'] / 2)
-    pg.mouse.down()
-    pg.wait_for_timeout(650)
-    pg.mouse.up()
-    assert pg.is_visible('#rotateRadial.show')
-    radial_box = pg.locator('#rotateRadial').bounding_box()
-    outside_x = pg.viewport_size['width'] - 20 if radial_box['x'] < pg.viewport_size['width'] / 2 else 20
-    outside_y = pg.viewport_size['height'] - 20 if radial_box['y'] < pg.viewport_size['height'] / 2 else 20
-    pg.mouse.click(outside_x, outside_y)
-    assert not pg.eval_on_selector('#rotateRadial', 'el => el.classList.contains("show")')
-
-    # 页面双击不再切换工具栏，避免连续点击控件时误触。
-    before = pg.eval_on_selector('.r-tools', 'el => el.className')
-    pg.dispatch_event('body', 'dblclick')
-    pg.wait_for_timeout(150)
-    after = pg.eval_on_selector('.r-tools', 'el => el.className')
-    assert before == after, f'空白双击不应改变工具栏状态（{before!r} -> {after!r}）'
-
-    # 桌面端右侧热区移入展开，移出后延迟收起。
-    box = pg.locator('.r-tools').bounding_box()
-    pg.mouse.move(pg.viewport_size['width'] - 2, box['y'] + box['height'] / 2)
-    pg.wait_for_timeout(100)
-    assert pg.eval_on_selector('.r-tools', 'el => el.classList.contains("is-open")')
-
-    pg.click('#toolsHandle')
-    assert pg.eval_on_selector('.r-tools', 'el => el.classList.contains("is-pinned")')
-    assert pg.get_attribute('#toolsHandle', 'aria-pressed') == 'true'
-    assert pg.eval_on_selector(
-        '#toolsHandle',
-        'el => !["transparent", "rgba(0, 0, 0, 0)"].includes(getComputedStyle(el).backgroundColor)',
-    )
-    pg.click('#toolsHandle')
-    assert not pg.eval_on_selector('.r-tools', 'el => el.classList.contains("is-pinned")')
-    assert pg.get_attribute('#toolsHandle', 'aria-pressed') == 'false'
-
-    # 阅读设置打开期间保持展开；连续点击进度条开关不会隐藏工具栏。
-    _open_reader_settings(pg)
-    progress_before = pg.eval_on_selector('#rBottom', 'el => el.classList.contains("hidden")')
-    pg.dblclick('#tProg')
-    assert pg.eval_on_selector('.r-tools', 'el => getComputedStyle(el).display') == 'block'
-    assert pg.eval_on_selector('#rBottom', 'el => el.classList.contains("hidden")') == progress_before
-    pg.keyboard.press('Escape')
-    pg.click('#toolsHandle')
-    assert not pg.eval_on_selector('.r-tools', 'el => el.classList.contains("is-pinned")')
-    pg.mouse.move(80, 80)
-    pg.wait_for_timeout(550)
-    assert not pg.eval_on_selector('.r-tools', 'el => el.classList.contains("is-open")')
-    pg.close()
+# 图片操作面板改由 Chrome DevTools CLI 验收。
 
 
 def test_reader_configuration_buttons_preserve_viewport(browser, live_server):

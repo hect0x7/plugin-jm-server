@@ -429,6 +429,19 @@
         else if (file.type === 'dir') fileIcon.innerHTML = icon('folder');
         else fileIcon.innerHTML = isImageName(file.name) ? icon('images') : icon('file');
 
+        if (file.first_img_url && file.first_img_url.thumbnail_source === 'system') {
+            fileIcon.classList.add('has-video-thumbnail');
+            main.classList.add('has-video-thumbnail');
+            fileIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg>';
+            var preview = document.createElement('img');
+            preview.alt = '';
+            preview.loading = 'lazy';
+            preview.decoding = 'async';
+            preview.addEventListener('error', function () { window.JmvRetrySystemThumbnail(preview); });
+            preview.src = file.first_img_url.data_thumb;
+            fileIcon.appendChild(preview);
+        }
+
         var name = document.createElement('span');
         name.className = 'column-item-name';
         name.textContent = file.name;

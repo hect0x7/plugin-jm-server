@@ -2,6 +2,7 @@ import io
 import os
 import re
 import threading
+import time
 from collections import OrderedDict
 from typing import Optional, Tuple
 
@@ -92,3 +93,79 @@ class InMemoryThumbnailCache:
 
 # 全局单例
 thumbnail_cache = InMemoryThumbnailCache()
+
+
+class ThumbnailBusyError(Exception):
+    """The bounded Shell extraction slot is temporarily unavailable."""
+
+
+class SystemVideoThumbnailCache:
+    """Bounded RAM cache; only one Shell codec process may run at a time."""
+
+    def __init__(self, max_entries=128, max_bytes=32 * 1024 * 1024):
+        self.max_entries = max_entries
+        self.max_bytes = max_bytes
+        self._cache = OrderedDict()
+        self._failures = OrderedDict()
+        self._lock = threading.Lock()
+        self._extract_lock = threading.Lock()
+
+    def get_thumbnail(self, file_path, max_width=300, max_height=400):
+        from .windows_thumbnail import extract_thumbnail, is_video_file
+        if not HAS_PILLOW or not is_video_file(file_path):
+            return None
+        try:
+            stat = os.stat(file_path)
+            if not os.path.isfile(file_path):
+                return None
+        except OSError:
+            return None
+        width = max(1, min(512, max_width))
+        height = max(1, min(512, max_height))
+        key = (os.path.normcase(os.path.abspath(file_path)),
+               stat.st_mtime_ns, stat.st_size, width, height)
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached:
+                self._cache.move_to_end(key)
+                return cached
+            if self._failures.get(key, 0) > time.monotonic():
+                return None
+
+        # Wait at most one codec timeout; never queue an unbounded work pool.
+        if not self._extract_lock.acquire(timeout=6):
+            raise ThumbnailBusyError()
+        try:
+            with self._lock:
+                cached = self._cache.get(key)
+                if cached:
+                    self._cache.move_to_end(key)
+                    return cached
+                if self._failures.get(key, 0) > time.monotonic():
+                    return None
+            data = extract_thumbnail(file_path, width, height)
+            with self._lock:
+                if not data:
+                    self._failures[key] = time.monotonic() + 30
+                    self._failures.move_to_end(key)
+                    while len(self._failures) > self.max_entries:
+                        self._failures.popitem(last=False)
+                    return None
+                result = (data, 'image/png', stat.st_mtime,
+                          f'"system_{abs(hash(key))}_{len(data)}"')
+                self._cache[key] = result
+                while (len(self._cache) > self.max_entries or
+                       sum(len(item[0]) for item in self._cache.values()) > self.max_bytes):
+                    self._cache.popitem(last=False)
+                self._failures.pop(key, None)
+                return result
+        finally:
+            self._extract_lock.release()
+
+    def clear(self):
+        with self._lock:
+            self._cache.clear()
+            self._failures.clear()
+
+
+system_video_thumbnail_cache = SystemVideoThumbnailCache()

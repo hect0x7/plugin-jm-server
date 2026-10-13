@@ -379,3 +379,11 @@
     .column-entry.is-selected { border-left: 3px solid Highlight; box-shadow: none; }
     .column-item-main:focus-visible { outline-color: Highlight; }
 }
+
+.column-item-icon.has-video-thumbnail { position: relative; width: 28px; height: 28px; }
+.column-item-icon.has-video-thumbnail svg { width: 17px; height: 17px; margin: auto; }
+.column-item-icon.has-video-thumbnail img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: var(--r-sm); background: var(--bg-sunken); }
+
+.column-item-main.has-video-thumbnail { grid-template-columns: 28px minmax(0, 1fr) auto; }
+
+.column-item-icon.thumbnail-failed > img[hidden] { display: none; }

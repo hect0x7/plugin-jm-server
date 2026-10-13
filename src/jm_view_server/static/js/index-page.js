@@ -799,3 +799,9 @@ pushRecent(getCurPath());
         };
     }
 })();
+
+// 原生首屏图片可能早于 defer 脚本失败；就绪后统一补上有界重试。
+document.querySelectorAll('[data-system-thumbnail][data-thumbnail-pending]').forEach(function(img) {
+    delete img.dataset.thumbnailPending;
+    window.JmvRetrySystemThumbnail(img);
+});

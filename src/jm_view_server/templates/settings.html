@@ -12,6 +12,7 @@
     (function(){var s=localStorage.getItem('jmv-theme'),p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',s||(p?'dark':'light'));})();
   </script>
   <link rel="stylesheet" href="/static/css/app.css?t={{ randomArg }}">
+  <link rel="stylesheet" href="/static/css/sync-settings.css?t={{ randomArg }}">
 </head>
 <body class="settings-page">
 <div class="app">
@@ -20,7 +21,7 @@
     <div class="topbar">
       <span class="settings-top-title">设置</span>
       <div class="spacer"></div>
-      <span class="settings-local-badge">仅保存在此浏览器</span>
+      <span class="settings-local-badge">设备设置 · 按需同步记忆</span>
     </div>
 
     <div class="content settings-content">
@@ -32,6 +33,7 @@
           <a href="#message"><span class="settings-icon" data-settings-icon="chat" aria-hidden="true"></span>消息身份</a>
           <a href="#shortcuts"><span class="settings-icon" data-settings-icon="keyboard" aria-hidden="true"></span>快捷键</a>
           <a href="#data"><span class="settings-icon" data-settings-icon="database" aria-hidden="true"></span>本地数据</a>
+          <a href="#sync"><span class="settings-icon" data-settings-icon="database" aria-hidden="true"></span>跨设备同步</a>
         </nav>
 
         <main class="settings-main">
@@ -40,7 +42,7 @@
             <div>
               <p class="settings-eyebrow">Browser control room</p>
               <h1>把常用习惯提前设好</h1>
-              <p>这些设置只作用于当前浏览器。除标注需刷新生效的项目外，其余修改会立即应用。</p>
+              <p>默认作用于当前浏览器；开启跨设备同步后，服务器允许的记忆和设置会共享。除标注需刷新生效的项目外，其余修改会立即应用。</p>
             </div>
           </header>
 
@@ -214,7 +216,7 @@
           <section class="settings-section" id="data">
             <div class="settings-section-head">
               <div><span class="settings-icon settings-heading-icon" data-settings-icon="database" aria-hidden="true"></span><h2>本地数据</h2></div>
-              <p>收藏、最近访问和阅读进度不会上传到服务器。</p>
+              <p>最近访问保存在本机。收藏目录和阅读进度只有参与同步且服务器允许时才共享；图片收藏始终由服务器共享。</p>
             </div>
             <div class="settings-data-grid">
               <div class="settings-data-card"><span id="bookmarkCount">0</span><b><span class="settings-icon" data-settings-icon="bookmark" aria-hidden="true"></span>收藏目录</b><button data-clear="bookmarks"><span class="settings-icon" data-settings-icon="trash" aria-hidden="true"></span>清空收藏</button></div>
@@ -226,6 +228,26 @@
               <button class="btn btn-outline settings-danger" id="resetPreferences"><span class="settings-icon" data-settings-icon="reset" aria-hidden="true"></span>恢复全部偏好默认值</button>
             </div>
           </section>
+          <section class="settings-section" id="sync">
+            <div class="settings-section-head"><div><span class="settings-icon settings-heading-icon" data-settings-icon="database" aria-hidden="true"></span><h2>跨设备同步</h2></div><p>在手机与电脑间接着阅读。</p></div>
+            <div id="syncSettings">
+              <div class="sync-panel settings-card sync-device-panel">
+                <div class="sync-panel-heading"><span class="settings-icon sync-panel-icon" data-settings-icon="network" aria-hidden="true"></span><div><h3>当前设备</h3><p class="sync-description">仅控制当前浏览器。</p></div><span class="sync-badge" id="syncDeviceBadge">正在连接</span></div>
+                <button id="syncParticipation" type="button" class="settings-switch-row settings-switch-button sync-toggle" role="switch" aria-checked="true" aria-label="此浏览器参与同步"><span><b>参与同步</b><small>使用服务器的同步范围</small></span><i aria-hidden="true"></i></button>
+                <div class="sync-status-box"><span class="sync-status-dot" aria-hidden="true"></span><div><p id="syncStatus" role="status">正在连接</p><p id="syncActiveRanges" class="sync-description"></p></div></div>
+                <div class="sync-actions"><button id="syncRetry" type="button" class="btn btn-outline"><span class="settings-icon" data-settings-icon="reset" aria-hidden="true"></span>重新同步</button><button id="syncMergeBookmarks" type="button" class="btn btn-outline"><span class="settings-icon" data-settings-icon="bookmark" aria-hidden="true"></span>合并收藏目录</button></div>
+                <p class="sync-footnote">关闭仅停止同步，不删除已有数据。图片收藏由服务器统一保存。</p>
+              </div>
+              <div id="syncPolicy" class="sync-panel settings-card" hidden>
+                <div class="sync-panel-heading"><span class="settings-icon sync-panel-icon" data-settings-icon="settings" aria-hidden="true"></span><div><h3>服务器规则</h3><p class="sync-description">所有设备共用此规则。</p></div><span class="sync-badge">本机管理</span></div>
+                <button id="syncServerEnabled" type="button" class="settings-switch-row settings-switch-button sync-toggle" role="switch" aria-checked="true" aria-label="服务器开启同步"><span><b>允许设备同步</b><small>默认开启，可调整同步范围</small></span><i aria-hidden="true"></i></button>
+                <div class="sync-ranges-heading"><h4>同步范围</h4><span id="syncRangeCount" class="sync-description"></span></div>
+                <div id="syncRanges" class="sync-ranges"></div>
+                <div class="sync-policy-footer"><p class="sync-footnote" id="syncPolicyHint">保存后对所有设备生效。</p><button id="syncSavePolicy" type="button" class="btn btn-primary" disabled><span class="settings-icon" data-settings-icon="check" aria-hidden="true"></span>保存设置</button></div>
+              </div>
+              <p id="syncRemote" class="sync-remote-note"><span class="settings-icon" data-settings-icon="lock" aria-hidden="true"></span>同步范围由服务器电脑设置。</p>
+            </div>
+          </section>
         </main>
       </div>
     </div>
@@ -234,8 +256,11 @@
 </div>
 
 <script src="/static/js/app.js?t={{ randomArg }}"></script>
+<script src="/static/js/sync.js?t={{ randomArg }}"></script>
+<script src="/static/js/reader-sync.js?t={{ randomArg }}"></script>
 <script src="/static/js/app-shell.js?t={{ randomArg }}"></script>
 <script src="/static/js/settings.js?t={{ randomArg }}"></script>
 <script>renderShell('settings'); initSettingsPage();</script>
+<script src="/static/js/sync-settings.js?t={{ randomArg }}"></script>
 </body>
 </html>

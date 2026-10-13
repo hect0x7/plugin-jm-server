@@ -80,6 +80,7 @@ var activePageIndex = 0;
 var activeDoubleGroupIndex = 0;
 var doubleGroups = [];
 var doubleRebuildTimer = null;
+var readerInitialized = false;
 var doubleBlankSlots = [];
 var doubleLayoutOriginalStyles = null;
 var viewportRestoreFrame = null;
@@ -133,6 +134,7 @@ function updateProgress(idx) {
 
 // 根据滚动位置计算当前页（与 common.js scroll 监听各自独立，不冲突）
 function onScroll() {
+  if (!readerInitialized) return;
   if (readerMode === 'double') {
     updateDoubleGroupFromScroll();
     return;
@@ -153,6 +155,7 @@ var ps = document.getElementById('pageselect');
 var track = document.getElementById('track');
 if (track) {
   track.onclick = function(e) {
+    if (!readerInitialized) return;
     var r = e.currentTarget.getBoundingClientRect();
     var ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     var targetIdx = Math.round(ratio * (TOTAL - 1));
@@ -163,11 +166,13 @@ if (track) {
 // Bug 修复：回到顶部。旧版此逻辑在 album.js（换皮丢弃 jquery 后没接上），
 // 这里用原生 JS 复刻，点击平滑滚回顶部。
 document.getElementById('gotop').addEventListener('click', function() {
+  if (!readerInitialized) return;
   this.blur();
   if (isPagedMode()) gotoPage(0);
   else window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 document.getElementById('gobottom').addEventListener('click', function() {
+  if (!readerInitialized) return;
   if (isPagedMode()) gotoPage(pages.length - 1);
 });
 
@@ -186,13 +191,17 @@ if (hidden) {
 }
 document.documentElement.classList.remove('reader-progress-prehidden');
 
+function applyProgressHidden(value, persist) {
+  rBottom.classList.toggle('hidden', !!value);
+  tProg.classList.toggle('active', !value);
+  if (persist && window.JmvPrefs) JmvPrefs.set('progressHidden', !!value);
+}
+
 tProg.addEventListener('click', function() {
   this.blur();
   var willHide = !rBottom.classList.contains('hidden');
   preserveReaderViewport(function() {
-    rBottom.classList.toggle('hidden', willHide);
-    tProg.classList.toggle('active', !willHide);
-    try { localStorage.setItem('jmv-prog-hidden', willHide ? '1' : '0'); } catch (e) {}
+    applyProgressHidden(willHide, true);
   });
 });
 
@@ -232,12 +241,14 @@ tJump.addEventListener('click', function(e) {
 });
 // 选中即跳页并收起浮窗
 jumpSelect.addEventListener('change', function() {
+  if (!readerInitialized) return;
   var idx = parseInt(jumpSelect.value, 10); // 下拉选项天然合法
   closeJump();
   gotoPage(idx);
 });
 if (ps) {
   ps.addEventListener('change', function() {
+    if (!readerInitialized) return;
     if (readerMode !== 'scroll') gotoPage(parseInt(ps.value, 10));
   });
 }
@@ -366,15 +377,20 @@ if (headHidden) {
   tHead.classList.toggle('active', !headHidden);
 }
 document.documentElement.classList.remove('reader-header-prehidden');
+
+function applyHeaderHidden(value, persist) {
+  headHidden = !!value;
+  readerTop.classList.toggle('hidden', headHidden);
+  document.body.classList.toggle('reader-header-visible', !headHidden);
+  tHead.classList.toggle('active', !headHidden);
+  if (persist && window.JmvPrefs) JmvPrefs.set('headerHidden', headHidden);
+}
 tHead.addEventListener('click', function(e) {
   this.blur();
   // 阻止冒泡避免触发关闭 morePop
   e.stopPropagation();
   var willHide = !readerTop.classList.contains('hidden');
   preserveReaderViewport(function() {
-    readerTop.classList.toggle('hidden', willHide);
-    document.body.classList.toggle('reader-header-visible', !willHide);
-    tHead.classList.toggle('active', !willHide);
-    try { localStorage.setItem('jmv-head-hidden', willHide ? '1' : '0'); } catch (e) {}
+    applyHeaderHidden(willHide, true);
   });
 });

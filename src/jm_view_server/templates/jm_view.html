@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="/static/css/reader-toolbar.css?t={{ randomArg }}">
   <link rel="stylesheet" href="/static/css/reader-contact-sheet.css?t={{ randomArg }}">
   <link rel="stylesheet" href="/static/css/reader-extras.css?t={{ randomArg }}">
+  <link rel="stylesheet" href="/static/css/reader-image-actions.css?t={{ randomArg }}">
 </head>
 <body>
 
@@ -150,7 +151,7 @@
           <button type="button" id="dirLtr" class="reader-grid-dir-btn active" title="常规排版（从左向右）">从左向右</button>
           <button type="button" id="dirRtl" class="reader-grid-dir-btn" title="日漫标准排版（从右向左）">从右向左</button>
         </div>
-        <button type="button" id="readerGridDoublePreview" class="reader-grid-toolbar-btn" title="切换缩略图双页对开排版预览">
+        <button type="button" id="readerGridDoublePreview" class="reader-grid-toolbar-btn" title="切换缩略图双页对开排版预览" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></svg>
           <span>双页预览</span>
         </button>
@@ -184,12 +185,22 @@
   </div>
 </div>
 
-<div class="rotate-radial" id="rotateRadial" role="menu" aria-label="图片旋转方向" aria-hidden="true" inert>
-  <button class="rotate-sector rotate-sector-top" type="button" role="menuitemradio" data-rotate="0" aria-label="恢复原始方向" aria-checked="false" tabindex="-1"><span>0°</span></button>
-  <button class="rotate-sector rotate-sector-right" type="button" role="menuitemradio" data-rotate="90" aria-label="向右旋转 90 度" aria-checked="false" tabindex="-1"><span>90°</span></button>
-  <button class="rotate-sector rotate-sector-bottom" type="button" role="menuitemradio" data-rotate="180" aria-label="旋转 180 度" aria-checked="false" tabindex="-1"><span>180°</span></button>
-  <button class="rotate-sector rotate-sector-left" type="button" role="menuitemradio" data-rotate="270" aria-label="向左旋转 90 度" aria-checked="false" tabindex="-1"><span>270°</span></button>
-  <span class="rotate-radial-center" aria-hidden="true">旋转</span>
+<div class="image-actions-overlay" id="imageActions" role="dialog" aria-modal="true" aria-labelledby="imageActionTitle" aria-hidden="true" inert>
+  <section class="image-actions-panel">
+    <div class="image-actions-heading">
+      <img id="imageActionPreview" alt="操作目标图片预览">
+      <h2 id="imageActionTitle">图片操作</h2>
+      <button id="imageActionClose" class="image-actions-close" type="button" aria-label="关闭图片操作">×</button>
+    </div>
+    <button id="imageActionFavorite" class="image-actions-favorite" type="button">收藏图片</button>
+    <fieldset class="image-actions-rotation"><legend>旋转图片</legend><div>
+      <button type="button" data-rotate="0" aria-pressed="true">恢复</button>
+      <button type="button" data-rotate="90" aria-pressed="false">90°</button>
+      <button type="button" data-rotate="180" aria-pressed="false">180°</button>
+      <button type="button" data-rotate="270" aria-pressed="false">270°</button>
+    </div></fieldset>
+    <p id="imageActionStatus" class="image-actions-status" role="status" aria-live="polite"></p>
+  </section>
 </div>
 
 <!-- 底部进度区 -->
@@ -204,6 +215,9 @@
 </div>
 
 <script src="/static/js/app.js?t={{ randomArg }}"></script>
+<script src="/static/js/sync.js?t={{ randomArg }}"></script>
+<script src="/static/js/reader-sync.js?t={{ randomArg }}"></script>
+<script src="/static/js/image-loader.js?t={{ randomArg }}"></script>
 <script src="/static/js/common.js?t={{ randomArg }}"></script>
 <script id="readerConfig" type="application/json">{{ {
   'albumId': data.title,
@@ -216,6 +230,7 @@
 <script src="/static/js/reader-preferences.js?t={{ randomArg }}"></script>
 <script src="/static/js/reader-modes.js?t={{ randomArg }}"></script>
 <script src="/static/js/reader-contact-sheet.js?t={{ randomArg }}"></script>
+<script src="/static/js/reader-image-actions.js?t={{ randomArg }}"></script>
 <script src="/static/js/reader-controls.js?t={{ randomArg }}"></script>
 <script src="/static/js/reader-favorites.js?t={{ randomArg }}"></script>
 </body>

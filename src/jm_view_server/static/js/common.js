@@ -58,31 +58,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const lazyImages = document.querySelectorAll(".lazyload");
-
-    const observer = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.getAttribute("data-src");
-                img.classList.remove("lazyload");
-                observer.unobserve(img);
-            }
+    if (window.JmvImageLoader) {
+        JmvImageLoader.scan(document);
+        const loadAllBtn = document.getElementById('loadAll');
+        if (loadAllBtn) loadAllBtn.addEventListener('click', function () {
+            JmvImageLoader.loadAll(document);
         });
-    });
-
-    lazyImages.forEach(img => {
-        observer.observe(img);
-    });
-    
-    const loadAllBtn = document.getElementById("loadAll");
-    if (loadAllBtn) {
-        loadAllBtn.addEventListener('click', function () {
-            lazyImages.forEach(img => {
-                img.src = img.getAttribute("data-src");
-                img.classList.remove("lazyload");
+    } else {
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (!entry.isIntersecting) return;
+                entry.target.src = entry.target.getAttribute('data-src');
+                entry.target.classList.remove('lazyload');
+                observer.unobserve(entry.target);
             });
-        })
+        });
+        document.querySelectorAll('.lazyload').forEach(function(image) { observer.observe(image); });
+        const loadAllBtn = document.getElementById('loadAll');
+        if (loadAllBtn) loadAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.lazyload').forEach(function(image) {
+                image.src = image.getAttribute('data-src'); image.classList.remove('lazyload'); observer.unobserve(image);
+            });
+        });
     }
 
     // ===== 桌面通知与全局消息监听逻辑 =====

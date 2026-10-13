@@ -112,6 +112,7 @@
 .reader-grid-close:hover { color: #fff; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
 
 .reader-grid {
+  overflow-anchor: none;
   min-height: 0; overflow: auto; overscroll-behavior: contain;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
   align-content: start; gap: clamp(14px, 1.8vw, 22px) clamp(12px, 1.6vw, 20px);

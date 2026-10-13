@@ -143,6 +143,15 @@ class FileManager:
                 'data_thumb': f'/api/thumb?path={quoted_path}',
                 'index': None
             }
+        elif the_type == 'file':
+            from .windows_thumbnail import is_video_file
+            if is_video_file(name):
+                first_img_url = {
+                    'filename': name,
+                    'data_thumb': f'/api/thumb?path={quoted_path}&source=system',
+                    'thumbnail_source': 'system',
+                    'index': None,
+                }
 
         # 针对文件类型，提前计算其所在的父文件夹目录并 quote，供后端精确下载使用
         dir_path = os.path.dirname(file_path).replace('\\', '/')

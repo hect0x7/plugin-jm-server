@@ -76,6 +76,16 @@ body.reader-double {
   margin: 0 auto; object-fit: contain;
   box-shadow: none;
 }
+.stream.reader-double-mode .page-img.lazyload,
+.stream.reader-double-mode .page-img[data-image-state="loading"],
+.stream.reader-double-mode .page-img[data-image-state="error"] { aspect-ratio: 2 / 3; }
+.scramble-page.image-load-error { position: relative; }
+.image-load-retry {
+  position: absolute; z-index: 3; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  max-width: calc(100% - 12px); min-height: 44px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elevated);
+  color: var(--text); cursor: pointer; font-size: 12px;
+}
 .stream.reader-double-mode {
   grid-auto-rows: auto !important;
   padding: var(--reader-double-width-breathing-block) var(--reader-double-width-breathing-inline) calc(120px + var(--reader-double-width-breathing-block));
@@ -119,6 +129,7 @@ body.reader-double {
   border-color: var(--brand);
   background: color-mix(in srgb, var(--brand) 7%, #08090e);
 }
+.reader-double-blank-content { display: contents; }
 .reader-double-blank-icon {
   width: 32px;
   height: 32px;

@@ -1,0 +1,29 @@
+.image-actions-overlay {
+  position: fixed; inset: 0; z-index: 125; display: grid; place-items: end center;
+  padding: 20px; background: rgba(0,0,0,.58); backdrop-filter: blur(6px);
+  visibility: hidden; opacity: 0; pointer-events: none; transition: opacity .16s ease, visibility .16s ease;
+}
+.image-actions-overlay.show { visibility: visible; opacity: 1; pointer-events: auto; }
+.image-actions-panel {
+  width: min(420px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow: auto;
+  padding: 20px; border: 1px solid var(--border); border-radius: 22px; overscroll-behavior: contain;
+  background: var(--bg-elevated); box-shadow: var(--shadow-lg); color: var(--text);
+}
+.image-actions-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.image-actions-heading img { width: 48px; height: 64px; object-fit: contain; border-radius: 6px; background: var(--bg-sunken); }
+.image-actions-heading h2 { margin: 0; flex: 1; font-size: 16px; line-height: 1.5; }
+.image-actions-panel button { min-width: 44px; min-height: 44px; cursor: pointer; }
+.image-actions-close { border: 0; border-radius: 50%; background: var(--surface-hover); color: var(--text); font-size: 24px; }
+.image-actions-favorite { width: 100%; border: 1px solid var(--brand); border-radius: 12px; background: color-mix(in srgb,var(--brand) 12%,var(--bg-elevated)); color: var(--brand); font-size: 15px; font-weight: 600; }
+.image-actions-panel button:disabled { opacity: .55; cursor: wait; }
+.image-actions-rotation { margin: 16px 0 0; padding: 0; border: 0; }
+.image-actions-rotation legend { margin-bottom: 8px; color: var(--text-secondary); font-size: 13px; }
+.image-actions-rotation > div { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.image-actions-rotation button { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-sunken); color: var(--text); }
+.image-actions-rotation button[aria-pressed="true"] { border-color: var(--brand); color: var(--brand); }
+.image-actions-status { min-height: 20px; margin: 12px 0 0; font-size: 13px; color: var(--text-secondary); overflow-wrap: anywhere; }
+@media (max-width: 860px) {
+  .image-actions-overlay { padding: 10px 10px calc(10px + env(safe-area-inset-bottom,0px)); }
+  .image-actions-panel { max-height: calc(100dvh - 20px - env(safe-area-inset-bottom,0px)); padding: 16px; border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .image-actions-overlay { transition: none; } }

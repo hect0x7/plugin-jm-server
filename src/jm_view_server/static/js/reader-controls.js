@@ -28,23 +28,27 @@ if (dirRtlBtn) dirRtlBtn.addEventListener('click', function() {
 });
 
 var pageClickTimer = null;
+var readerHasInteracted = false;
+['pointerdown', 'keydown', 'wheel'].forEach(function(name) {
+  document.addEventListener(name, function() { readerHasInteracted = true; }, {capture: true, passive: true});
+});
 stream.addEventListener('click', function(e) {
   if (readerMode !== 'single') return;
+  if (imageActions && imageActions.classList.contains('show')) return;
   if (Date.now() < suppressPageClickUntil) return;
   if (e.detail > 1) { clearTimeout(pageClickTimer); return; }
   clearTimeout(pageClickTimer);
-  pageClickTimer = setTimeout(function() {
-    var rect = stream.getBoundingClientRect();
-    var clickedLeft = e.clientX < rect.left + rect.width / 2;
-    var delta = clickedLeft ? -1 : 1;
-    gotoPage(activePageIndex + delta);
-  }, 500);
+  if (e.target.closest && e.target.closest('button, input, select, a')) return;
+  var rect = stream.getBoundingClientRect();
+  var clickedLeft = e.clientX < rect.left + rect.width / 2;
+  gotoPage(activePageIndex + (clickedLeft ? -1 : 1));
 });
 stream.addEventListener('dblclick', function(e) {
   clearTimeout(pageClickTimer);
 });
 
 document.addEventListener('keydown', function(e) {
+  if (imageActions && imageActions.classList.contains('show')) return;
   if (inEditable(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
   var cur = currentPageIdx();
   switch (e.key) {
@@ -109,7 +113,7 @@ document.addEventListener('keydown', function(e) {
       e.preventDefault(); openReaderHelp(); break;
     case 'Escape':
     case 'Esc':
-      closeRotateRadial();
+      closeImageActions();
       closeReaderGrid();
       closeReaderHelp(); closeJump(); closeSize(); closeMore();
       if (!desktopToolbarQuery.matches) {
@@ -124,7 +128,7 @@ document.addEventListener('keydown', function(e) {
 // ---------- 项1：阅读进度记忆 ----------
 // 滚动时把当前页相对各本文件夹的索引分别写入各自的 localStorage
 var ALBUM_RANGES = [
-  { start: 0, end: TOTAL - 1, key: 'jmv-progress:' + ALBUM_ID, title: ALBUM_ID }
+  { start: 0, end: TOTAL - 1, key: 'jmv-progress:' + ALBUM_ID, title: ALBUM_ID, path: readerConfig.albumPath }
 ];
 var saveTimer = null;
 var scrollProgressIndicator = document.getElementById('readerScrollProgress');
@@ -204,9 +208,18 @@ window.addEventListener('scroll', function() {
 }, { passive: true });
 window.addEventListener('resize', function() { updateDocumentScrollProgress(false); });
 
-(function initResume() {
+var savedProgressAtOpen = null;
+try { savedProgressAtOpen = parseInt(localStorage.getItem(PROGRESS_KEY), 10); } catch (e) {}
+function initResume() {
   var saved = null;
-  try { saved = parseInt(localStorage.getItem(PROGRESS_KEY), 10); } catch (e) {}
+  saved = savedProgressAtOpen;
+  if (window.JmvReaderMemory && !readerConfig.favorites) {
+    var shared = JmvReaderMemory.get('progress', readerConfig.albumPath);
+    if (shared === null) saved = null;
+    else if (shared && shared.image) saved = rawPages.findIndex(function(page) {
+      return JmvSync.canonicalPath(JmvReaderMemory.imagePath(page.querySelector('.page-img'))) === JmvSync.canonicalPath(shared.image);
+    });
+  }
   if (!saved || saved <= 0 || saved >= pages.length) return; // 无记录/首页不提示
   var bar = document.createElement('div');
   bar.className = 'resume-bar';
@@ -229,6 +242,52 @@ window.addEventListener('resize', function() { updateDocumentScrollProgress(fals
     dismiss();
   });
   bar.querySelector('.resume-close').addEventListener('click', dismiss);
-})();
-setReaderMode(readerMode, { persist: false, initial: true });
-updateDocumentScrollProgress(false);
+}
+function initializeReader() {
+  if (readerInitialized) return;
+  if (window.JmvPrefs) {
+    readerMode = JmvPrefs.get('readerMode');
+    readingDirection = JmvPrefs.get('readingDirection');
+    doubleWidthScale = JmvPrefs.get('doubleWidthScale');
+  }
+  readerInitialized = true;
+  applyReadingDirection(readingDirection, false);
+  setReaderMode(readerMode, { persist: false, initial: true });
+  updateDocumentScrollProgress(false);
+  if (window.JmvSync) {
+    JmvSync.ready.then(function() {
+      if (readerHasInteracted) return;
+      var shared = readerConfig.favorites ? undefined : JmvReaderMemory.get('sequence', readerConfig.albumPath);
+      if (shared !== undefined) {
+        var lookup = new Map(rawPages.map(function(page, index) {
+          return [JmvSync.canonicalPath(JmvReaderMemory.imagePath(page.querySelector('.page-img'))), index];
+        }));
+        var seen = new Set();
+        pageSequence = shared ? shared.items.map(function(item) {
+          if (item.type === 'blank') return {type: 'blank', id: item.id};
+          var index = lookup.get(JmvSync.canonicalPath(item.path));
+          if (index === undefined || seen.has(index)) return null;
+          seen.add(index); return {type: 'page', pageIndex: index};
+        }).filter(Boolean) : [];
+        originalSequence.forEach(function(item) { if (!seen.has(item.pageIndex)) pageSequence.push({type: 'page', pageIndex: item.pageIndex}); });
+        isSequencePersisted = shared !== null;
+        try {
+          localStorage.setItem(PERSIST_SEQUENCE_KEY, isSequencePersisted ? '1' : '0');
+          localStorage.setItem(CUSTOM_SEQUENCE_KEY, JSON.stringify(pageSequence));
+        } catch (error) {}
+        applySequenceToDOM(); rebuildReaderGrid();
+      }
+      if (JmvSync.allows('readingDirection')) applyReadingDirection(JmvPrefs.get('readingDirection'), false);
+      if (JmvSync.allows('doubleWidthScale')) applyDoubleWidthScale(JmvPrefs.get('doubleWidthScale'), false);
+      if (JmvSync.allows('readerMode')) setReaderMode(JmvPrefs.get('readerMode'), {persist: false, initial: true});
+      if (JmvSync.allows('eyeCare')) applyEye(JmvPrefs.get('eyeCare'), false);
+      if (JmvSync.allows('headerHidden')) applyHeaderHidden(JmvPrefs.get('headerHidden'), false);
+      if (JmvSync.allows('progressHidden')) applyProgressHidden(JmvPrefs.get('progressHidden'), false);
+      if (JmvSync.allows('autoNext')) setAutoNext(JmvPrefs.get('autoNext'), false);
+      initResume();
+    });
+  } else initResume();
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeReader, {once: true});
+} else initializeReader();

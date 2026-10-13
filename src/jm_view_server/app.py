@@ -9,11 +9,12 @@ from flask import Flask, abort, jsonify, request, session
 from .files import FileManager
 from .message import MessageManager
 from .favorites import FavoriteManager
-from .routes import FileRoutesMixin, PageRoutesMixin, ServiceRoutesMixin, TransferRoutesMixin
+from .sync import SyncManager
+from .routes import FileRoutesMixin, PageRoutesMixin, ServiceRoutesMixin, TransferRoutesMixin, SyncRoutesMixin
 
 
 # noinspection PyMethodMayBeStatic
-class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRoutesMixin):
+class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRoutesMixin, SyncRoutesMixin):
     DEFAULT_PORT = 80
     # 匹配移动端设备的正则表达式
     MATCH_EXP = 'Android|webOS|iPhone|iPad|iPod|BlackBerry'
@@ -49,6 +50,8 @@ class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRou
                          static_folder='static',
                          static_url_path='/static',
                          )
+        # Template edits take effect on the next request without restarting Python.
+        self.app.config['TEMPLATES_AUTO_RELOAD'] = True
         @self.app.after_request
         def finalize_response(response):
             # 文件列表会同时携带列表/网格两套响应式 DOM，目录名较长时 HTML
@@ -70,7 +73,7 @@ class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRou
             return response
 
         # 使用安全随机值作为 secret_key，避免可预测的 session 签名
-        self.app.secret_key = os.environ.get('FLASK_SECRET_KEY') or secrets.token_hex(32)
+        self.app.secret_key = (env or {}).get('FLASK_SECRET_KEY') or os.environ.get('FLASK_SECRET_KEY') or secrets.token_hex(32)
         # 设置登录密钥
         self.password = password
         self.file_manager = FileManager(default_path, current_path)
@@ -88,6 +91,7 @@ class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRou
         # 初始化消息管理器
         self.message_manager = MessageManager()
         self.favorite_manager = FavoriteManager()
+        self.sync_manager = SyncManager()
 
     def __hook_jm_logging(self):
         import jmcomic
@@ -193,9 +197,17 @@ class JmServer(FileRoutesMixin, PageRoutesMixin, TransferRoutesMixin, ServiceRou
                               methods=['GET', 'PUT', 'DELETE'])
         self.app.add_url_rule('/api/favorites/copy', 'api_copy_favorites', self.api_copy_favorites,
                               methods=['POST'])
+        self.app.add_url_rule('/api/sync/config', 'api_sync_config', self.api_sync_config,
+                              methods=['GET', 'PUT'])
+        self.app.add_url_rule('/api/sync/state', 'api_sync_state', self.api_sync_state,
+                              methods=['GET', 'POST'])
 
     def run(self, **kwargs):
         kwargs.setdefault('port', self.DEFAULT_PORT)
+        if kwargs.get('use_reloader', kwargs.get('debug', self.app.debug)):
+            # The child inherits this process-local key so reloads keep login cookies valid.
+            if not os.environ.get('FLASK_SECRET_KEY'):
+                os.environ['FLASK_SECRET_KEY'] = self.app.secret_key
         self.register_routes()
         # 监听在所有 IP 地址上
         self.app.run(**kwargs)

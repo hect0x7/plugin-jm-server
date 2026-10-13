@@ -329,8 +329,18 @@ function getBookmarks() {
 }
 
 function saveBookmarks(bookmarks) {
+    const previous = getBookmarks();
     localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
     renderBookmarks();
+    if (window.JmvSync) {
+        const keyFor = item => 'bookmark:' + window.JmvSync.canonicalPath(item.path);
+        bookmarks.forEach(item => {
+            if (!previous.some(old => keyFor(old) === keyFor(item))) window.JmvSync.setRecord(keyFor(item), item);
+        });
+        previous.forEach(item => {
+            if (!bookmarks.some(current => keyFor(current) === keyFor(item))) window.JmvSync.setRecord(keyFor(item), null);
+        });
+    }
 }
 
 function addCurrentBookmark() {
@@ -378,7 +388,7 @@ function renderBookmarks() {
     const list = document.getElementById('bookmarks-list');
     const emptyState = document.getElementById('bookmarks-empty');
     const bookmarks = getBookmarks();
-
+    if (!list || !emptyState) return;
     list.innerHTML = '';
 
     if (bookmarks.length === 0) {
@@ -391,17 +401,18 @@ function renderBookmarks() {
     bookmarks.forEach((b, index) => {
         const li = document.createElement('li');
         li.className = 'bookmark-item';
-        li.innerHTML = `
-            <a href="javascript:" onclick="changeDir('${b.path.replace(/\\/g, '\\\\')}')" class="bookmark-link">
-                <div class="bookmark-path" title="${b.path}">${b.path}</div>
-                <div class="bookmark-time">
-                    ${formatTime(b.timestamp)}
-                </div>
-            </a>
-            <button class="bookmark-delete" onclick="deleteBookmark(${index})" title="删除">
-                ${icon('x')}
-            </button>
-        `;
+        const link = document.createElement('a');
+        link.href = '#'; link.className = 'bookmark-link';
+        link.addEventListener('click', event => { event.preventDefault(); changeDir(b.path); });
+        const pathLabel = document.createElement('div');
+        pathLabel.className = 'bookmark-path'; pathLabel.title = b.path; pathLabel.textContent = b.path;
+        const timeLabel = document.createElement('div');
+        timeLabel.className = 'bookmark-time'; timeLabel.textContent = formatTime(b.timestamp);
+        link.append(pathLabel, timeLabel);
+        const removeButton = document.createElement('button');
+        removeButton.className = 'bookmark-delete'; removeButton.title = '删除'; removeButton.setAttribute('aria-label', '删除收藏目录');
+        removeButton.innerHTML = icon('x'); removeButton.addEventListener('click', () => deleteBookmark(index));
+        li.append(link, removeButton);
         list.appendChild(li);
     });
 }

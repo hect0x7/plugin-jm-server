@@ -1,6 +1,7 @@
 /* 阅读区兼容深浅主题，移除 hardcode 的深色 */
 :root { --reader-header-height: calc(56px + env(safe-area-inset-top, 0px)); }
 html, body { min-height: 100vh; background: var(--bg); color: var(--text); }
+html { overflow-x: hidden; }
 body.reader-header-visible { padding-top: var(--reader-header-height); }
 body.reader-header-visible .scramble-page { scroll-margin-top: var(--reader-header-height); }
 
@@ -69,7 +70,7 @@ html.reader-header-prehidden .reader-top,
 /* 图片流 */
 /* 无缝阅读：图片间零间距、无圆角阴影（对齐旧版看本的连续观感） */
 .stream { max-width: 800px; margin: 0 auto; padding: 0 0 120px; display: flex; flex-direction: column; gap: 0; user-select: none; -webkit-user-select: none; }
-.page-img { width: 100%; background: var(--bg-sunken); min-height: 200px; display: block; vertical-align: bottom; will-change: transform; transform: translateZ(0); }
+.page-img { --reader-rotation-fit: var(--reader-quarter-turn-fit, 1); width: 100%; background: var(--bg-sunken); min-height: 200px; display: block; vertical-align: bottom; }
 
 /* 右侧悬浮工具栏 */
 .r-tools {

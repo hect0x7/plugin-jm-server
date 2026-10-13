@@ -2,11 +2,19 @@
    新增阅读增强功能（纯前端，均记 localStorage，key 前缀 jmv-）
    ============================================================ */
 
-// 相册标识：优先用标题，作为 localStorage key 的一部分
-var ALBUM_ID = readerConfig.albumId;
+// Use folder identity to keep equally named albums separate.
+var ALBUM_ID = readerConfig.favorites ? 'favorites' : readerConfig.albumPath;
 var PROGRESS_KEY = 'jmv-progress:' + ALBUM_ID;
 var CUSTOM_SEQUENCE_KEY = 'jmv-custom-seq:' + ALBUM_ID;
 var PERSIST_SEQUENCE_KEY = 'jmv-persist-seq:' + ALBUM_ID;
+try {
+  ['jmv-progress:', 'jmv-custom-seq:', 'jmv-persist-seq:'].forEach(function(prefix) {
+    if (localStorage.getItem(prefix + ALBUM_ID) === null) {
+      var old = localStorage.getItem(prefix + readerConfig.albumId);
+      if (old !== null) localStorage.setItem(prefix + ALBUM_ID, old);
+    }
+  });
+} catch (error) {}
 
 // 原始页面元素引用与索引
 var rawPages = Array.from(pages);
@@ -52,17 +60,32 @@ if (isSequencePersisted) {
 }
 
 function saveSequenceState() {
-  if (isSequencePersisted) {
+  var ranges = typeof ALBUM_RANGES === 'undefined' ? [{start: 0, end: rawPages.length - 1, path: readerConfig.albumPath}] : ALBUM_RANGES;
+  ranges.forEach(function(range) {
+    var sequence = pageSequence.filter(function(item, index) {
+      var pageIndex = item.pageIndex;
+      if (item.type === 'blank') {
+        var next = pageSequence.slice(index + 1).find(function(other) { return other.type === 'page'; });
+        var previous = pageSequence.slice(0, index).reverse().find(function(other) { return other.type === 'page'; });
+        pageIndex = next ? next.pageIndex : previous ? previous.pageIndex : range.start;
+      }
+      return pageIndex >= range.start && pageIndex <= range.end;
+    });
+    var album = readerConfig.favorites ? 'favorites' : range.path;
+    var localSequence = sequence.map(function(item) { return item.type === 'blank' ? {type: 'blank', id: item.id} : {type: 'page', pageIndex: item.pageIndex - range.start}; });
     try {
-      localStorage.setItem(PERSIST_SEQUENCE_KEY, '1');
-      localStorage.setItem(CUSTOM_SEQUENCE_KEY, JSON.stringify(pageSequence));
-    } catch (e) {}
-  } else {
-    try {
-      localStorage.removeItem(PERSIST_SEQUENCE_KEY);
-      localStorage.removeItem(CUSTOM_SEQUENCE_KEY);
-    } catch (e) {}
-  }
+      if (isSequencePersisted) {
+        localStorage.setItem('jmv-persist-seq:' + album, '1');
+        localStorage.setItem('jmv-custom-seq:' + album, JSON.stringify(localSequence));
+      } else {
+        localStorage.removeItem('jmv-persist-seq:' + album);
+        localStorage.removeItem('jmv-custom-seq:' + album);
+      }
+    } catch (error) {}
+    if (window.JmvReaderMemory && !readerConfig.favorites) JmvReaderMemory.sequence(album, isSequencePersisted ? sequence.map(function(item) {
+      return item.type === 'blank' ? {type: 'blank', id: item.id} : {type: 'page', path: JmvReaderMemory.imagePath(rawPages[item.pageIndex].querySelector('.page-img'))};
+    }) : null);
+  });
 }
 
 // 同步主阅读流 DOM 顺序与双页重排
@@ -96,14 +119,15 @@ var stream = document.getElementById('stream');
 stream.classList.add('fit-width');
 
 // ---------- 项9：护眼滤镜（暖光，切换并记忆） ----------
-function applyEye(on) {
+function applyEye(on, persist) {
   stream.classList.toggle('eye-care', !!on);
   document.body.classList.toggle('reader-eye-care', !!on);
   document.getElementById('tEye').classList.toggle('active', !!on);
+  if (persist === false) return;
   if (window.JmvPrefs) JmvPrefs.set('eyeCare', !!on);
   else try { localStorage.setItem('jmv-eyecare', on ? '1' : '0'); } catch (e) {}
 }
-applyEye(window.JmvPrefs ? JmvPrefs.get('eyeCare') : (function(){ try { return localStorage.getItem('jmv-eyecare') === '1'; } catch(e){ return false; } })());
+applyEye(window.JmvPrefs ? JmvPrefs.get('eyeCare') : (function(){ try { return localStorage.getItem('jmv-eyecare') === '1'; } catch(e){ return false; } })(), false);
 document.getElementById('tEye').addEventListener('click', function() {
   this.blur();
   applyEye(!stream.classList.contains('eye-care'));
@@ -250,13 +274,13 @@ var OPEN_FROM_DIR = readerConfig.openFromDir;
 var tAutoNext = document.getElementById('tAutoNext');
 var isAutoNext = localStorage.getItem('jmv-auto-next') === '1'; // 默认关闭
 
-function setAutoNext(on) {
+function setAutoNext(on, persist) {
   isAutoNext = !!on;
   if (tAutoNext) tAutoNext.classList.toggle('active', isAutoNext);
-  try { localStorage.setItem('jmv-auto-next', isAutoNext ? '1' : '0'); } catch(e) {}
+  if (persist !== false && window.JmvPrefs) JmvPrefs.set('autoNext', isAutoNext);
 }
 
-setAutoNext(isAutoNext);
+setAutoNext(isAutoNext, false);
 
 if (tAutoNext) {
   tAutoNext.addEventListener('click', function(e) {
@@ -270,12 +294,14 @@ if (tAutoNext) {
 }
 
 var autoJumpTimer = null;
-var countdownSec = 2;
+var AUTO_NEXT_COUNTDOWN_SECONDS = 5;
+var countdownSec = AUTO_NEXT_COUNTDOWN_SECONDS;
 var jumpBar = null;
 var isCancelledThisTime = false;
 var isLoadingNextAlbum = false;
 
 function checkTouchBottom() {
+  if (!readerInitialized) return;
   if (!isAutoNext || !NEXT_DIR_PATH || isCancelledThisTime || isLoadingNextAlbum) return;
 
   var threshold = 80;
@@ -295,7 +321,7 @@ function checkTouchBottom() {
 }
 
 function showJumpCountdown() {
-  countdownSec = 2;
+  countdownSec = AUTO_NEXT_COUNTDOWN_SECONDS;
   isCancelledThisTime = false;
 
   jumpBar = document.createElement('div');
@@ -365,6 +391,7 @@ window.addEventListener('scroll', function() {
 }, { passive: true });
 
 function loadNextAlbum() {
+  if (!readerInitialized) return;
   if (isLoadingNextAlbum || !NEXT_DIR_PATH) return;
   isLoadingNextAlbum = true;
 
@@ -402,7 +429,8 @@ function appendNextAlbumData(res) {
   var streamEl = document.getElementById('stream');
   if (!streamEl) return;
 
-  var startIdx = TOTAL;
+  // Page identities must follow the original array, never the reordered DOM.
+  var startIdx = rawPages.length;
   var newImagesCount = res.images.length;
   var wasAtPagedEnd = isPagedMode() && activePageIndex === startIdx - 1;
 
@@ -422,31 +450,20 @@ function appendNextAlbumData(res) {
 
     container.appendChild(img);
     streamEl.appendChild(container);
+    rawPages.push(container);
+    originalSequence.push({ type: 'page', pageIndex: globalIdx });
+    pageSequence.push({ type: 'page', pageIndex: globalIdx });
   });
 
-  var newObserver = new IntersectionObserver(function(entries, observerInstance) {
-    entries.forEach(function(entry) {
-      if (entry.isIntersecting) {
-        var img = entry.target;
-        img.src = img.getAttribute("data-src");
-        img.classList.remove("lazyload");
-        observerInstance.unobserve(img);
-      }
-    });
-  });
-  for (var i = startIdx; i < startIdx + newImagesCount; i++) {
-    var imgEl = document.querySelector('#page_' + i + ' .lazyload');
-    if (imgEl) newObserver.observe(imgEl);
-  }
-
-  TOTAL = startIdx + newImagesCount;
-  pages = document.querySelectorAll('.scramble-page');
+  TOTAL = rawPages.length;
+  pages = rawPages;
   NEXT_DIR_PATH = res.next_dir_path;
 
   ALBUM_RANGES.push({
     start: startIdx,
     end: startIdx + newImagesCount - 1,
-    key: 'jmv-progress:' + res.title,
+    key: 'jmv-progress:' + res.full_path,
+    path: res.full_path,
     title: res.title
   });
 
@@ -473,85 +490,21 @@ function appendNextAlbumData(res) {
   }
   rebuildReaderGrid();
   rebuildDoubleGroups(activePageIndex, { scroll: false });
+  // Register new images only after all indices and album ranges are available.
+  if (window.JmvImageLoader) JmvImageLoader.scan(streamEl);
   if (wasAtPagedEnd) gotoPage(startIdx);
 }
 
-// ---------- 图片临时旋转：按住图片后从四扇区菜单选择方向 ----------
+// ---------- 图片临时旋转：由图片操作面板选择方向 ----------
+function updateImageRotationFit(img) {
+  var width = img.naturalWidth > 1 ? img.naturalWidth : img.clientWidth;
+  var height = img.naturalHeight > 1 ? img.naturalHeight : img.clientHeight;
+  var ratio = width > 0 && height > 0 ? width / height : 2 / 3;
+  img.style.setProperty('--reader-quarter-turn-fit', String(Math.min(1, ratio, 1 / ratio)));
+}
 function setImageRotation(img, deg) {
   deg = parseInt(deg, 10) || 0;
   img.dataset.rotate = String(deg);
-  img.style.transform = 'rotate(' + deg + 'deg)';
+  updateImageRotationFit(img);
+  img.style.transform = 'rotate(' + deg + 'deg)' + (deg % 180 ? ' scale(var(--reader-rotation-fit, 1))' : '');
 }
-
-var rotateRadial = document.getElementById('rotateRadial');
-var rotateTarget = null;
-var rotateHoldTimer = null;
-var rotateHoldStart = null;
-var suppressPageClickUntil = 0;
-
-function closeRotateRadial() {
-  if (!rotateRadial) return;
-  rotateRadial.classList.remove('show');
-  rotateRadial.setAttribute('aria-hidden', 'true');
-  rotateRadial.setAttribute('inert', '');
-  rotateRadial.querySelectorAll('[data-rotate]').forEach(function(button) { button.tabIndex = -1; });
-  rotateTarget = null;
-}
-
-function openRotateRadial(img, clientX, clientY) {
-  if (!rotateRadial || !img) return;
-  rotateTarget = img;
-  var radius = rotateRadial.offsetWidth / 2 || 88;
-  var margin = 12;
-  rotateRadial.style.left = Math.max(radius + margin, Math.min(window.innerWidth - radius - margin, clientX)) + 'px';
-  rotateRadial.style.top = Math.max(radius + margin, Math.min(window.innerHeight - radius - margin, clientY)) + 'px';
-  var current = String(parseInt(img.dataset.rotate || '0', 10) % 360);
-  rotateRadial.querySelectorAll('[data-rotate]').forEach(function(button) {
-    button.setAttribute('aria-checked', button.dataset.rotate === current ? 'true' : 'false');
-    button.tabIndex = 0;
-  });
-  rotateRadial.removeAttribute('inert');
-  rotateRadial.classList.add('show');
-  rotateRadial.setAttribute('aria-hidden', 'false');
-}
-
-function cancelRotateHold() {
-  clearTimeout(rotateHoldTimer);
-  rotateHoldTimer = null;
-  rotateHoldStart = null;
-}
-
-stream.addEventListener('pointerdown', function(e) {
-  var img = e.target.closest ? e.target.closest('.page-img') : null;
-  if (!img || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  cancelRotateHold();
-  rotateHoldStart = { x: e.clientX, y: e.clientY };
-  rotateHoldTimer = setTimeout(function() {
-    suppressPageClickUntil = Date.now() + 700;
-    openRotateRadial(img, e.clientX, e.clientY);
-    if (e.pointerType !== 'mouse' && navigator.vibrate) navigator.vibrate(35);
-    rotateHoldTimer = null;
-  }, e.pointerType === 'mouse' ? 520 : 650);
-});
-stream.addEventListener('pointermove', function(e) {
-  if (!rotateHoldStart) return;
-  if (Math.hypot(e.clientX - rotateHoldStart.x, e.clientY - rotateHoldStart.y) > 10) cancelRotateHold();
-});
-stream.addEventListener('pointerup', cancelRotateHold);
-stream.addEventListener('pointercancel', cancelRotateHold);
-stream.addEventListener('dragstart', function(e) {
-  if (e.target.closest && e.target.closest('.page-img')) e.preventDefault();
-});
-
-if (rotateRadial) {
-  rotateRadial.querySelectorAll('[data-rotate]').forEach(function(button) {
-    button.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (rotateTarget) setImageRotation(rotateTarget, button.dataset.rotate);
-      closeRotateRadial();
-    });
-  });
-}
-document.addEventListener('pointerdown', function(e) {
-  if (rotateRadial && rotateRadial.classList.contains('show') && !rotateRadial.contains(e.target)) closeRotateRadial();
-});

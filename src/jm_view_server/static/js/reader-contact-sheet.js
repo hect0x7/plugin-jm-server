@@ -10,6 +10,34 @@ var isGridDoublePreview = (function() {
 })();
 var draggedSeqIndex = null;
 var pointerDragState = null;
+var readerGridTypeRefreshPending = false;
+var readerGridTypeRefreshTimer = null;
+var readerGridCards = new Map();
+var readerGridSpreads = new Map();
+
+function flushReaderGridTypeRefresh() {
+  if (!readerGridTypeRefreshPending || pointerDragState || draggedSeqIndex !== null) return;
+  readerGridTypeRefreshPending = false;
+  if (!isGridDoublePreview || !readerGridOverlay || !readerGridOverlay.classList.contains('show')) return;
+  var scrollTop = readerGrid.scrollTop;
+  var anchor = null, anchorTop = 0;
+  if (readerGrid.getBoundingClientRect) {
+    var gridTop = readerGrid.getBoundingClientRect().top;
+    Array.from(readerGrid.querySelectorAll('[data-reader-page]')).some(function(card) {
+      var rect = card.getBoundingClientRect();
+      if (rect.bottom > gridTop) { anchor = card; anchorTop = rect.top; return true; }
+      return false;
+    });
+  }
+  rebuildReaderGrid();
+  readerGrid.scrollTop = anchor && anchor.isConnected ? readerGrid.scrollTop + anchor.getBoundingClientRect().top - anchorTop : scrollTop;
+}
+
+function requestReaderGridTypeRefresh() {
+  readerGridTypeRefreshPending = true;
+  clearTimeout(readerGridTypeRefreshTimer);
+  readerGridTypeRefreshTimer = setTimeout(flushReaderGridTypeRefresh, 0);
+}
 
 function clearAllDropIndicators() {
   if (!readerGrid) return;
@@ -33,6 +61,11 @@ function updateGridCurrentPage() {
     item.classList.toggle('is-current', current);
     if (current) item.setAttribute('aria-current', 'page');
     else item.removeAttribute('aria-current');
+    var badge = item.querySelector('.reader-grid-current-badge');
+    if (current && !badge) {
+      badge = document.createElement('span'); badge.className = 'reader-grid-current-badge'; badge.textContent = '当前';
+      item.querySelector('.reader-grid-thumb-wrap').appendChild(badge);
+    } else if (!current && badge) badge.remove();
   });
 }
 
@@ -42,7 +75,11 @@ function createGridPageCard(pageIdx, seqIdx) {
   var sourceImage = pageEl.querySelector('.page-img');
   if (!sourceImage) return null;
 
+  var key = 'page:' + pageIdx;
+  var existing = readerGridCards.get(key);
+  if (existing) { existing.dataset.seqIndex = String(seqIdx); return existing; }
   var card = document.createElement('div');
+  readerGridCards.set(key, card);
   card.className = 'reader-grid-item' + (pageIdx === activePageIndex ? ' is-current' : '');
   card.draggable = true;
   card.dataset.seqIndex = String(seqIdx);
@@ -57,6 +94,9 @@ function createGridPageCard(pageIdx, seqIdx) {
   thumbImg.loading = 'lazy';
   thumbImg.decoding = 'async';
   thumbImg.alt = '';
+  thumbImg.addEventListener('load', function() {
+    updateImagePageType(pageEl.querySelector('.page-img'), thumbImg);
+  });
   thumbImg.src = sourceImage.getAttribute('data-src') || sourceImage.getAttribute('data-original') || sourceImage.src;
 
   var pageBadge = document.createElement('span');
@@ -81,7 +121,7 @@ function createGridPageCard(pageIdx, seqIdx) {
   insertBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     var blankItem = { type: 'blank', id: 'b_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) };
-    pageSequence.splice(seqIdx, 0, blankItem);
+    pageSequence.splice(Number(card.dataset.seqIndex), 0, blankItem);
     saveSequenceState();
     applySequenceToDOM();
     rebuildReaderGrid();
@@ -110,7 +150,11 @@ function createGridPageCard(pageIdx, seqIdx) {
 }
 
 function createGridBlankCard(blankItem, seqIdx) {
+  var key = 'blank:' + blankItem.id;
+  var existing = readerGridCards.get(key);
+  if (existing) { existing.dataset.seqIndex = String(seqIdx); return existing; }
   var blankCard = document.createElement('div');
+  readerGridCards.set(key, blankCard);
   blankCard.className = 'reader-grid-blank';
   blankCard.draggable = true;
   blankCard.dataset.seqIndex = String(seqIdx);
@@ -128,7 +172,7 @@ function createGridBlankCard(blankItem, seqIdx) {
   delBtn.textContent = '✕';
   delBtn.addEventListener('click', function(e) {
     e.stopPropagation();
-    pageSequence.splice(seqIdx, 1);
+    pageSequence.splice(Number(blankCard.dataset.seqIndex), 1);
     saveSequenceState();
     applySequenceToDOM();
     rebuildReaderGrid();
@@ -173,7 +217,9 @@ function createGridPlaceholderCard(text) {
 
 function rebuildReaderGrid() {
   if (!readerGrid) return;
-  readerGrid.textContent = '';
+  readerGridTypeRefreshPending = false;
+  var desired = [];
+  var usedSpreads = new Set();
   updateGridStats();
 
   if (readerGridPersist) {
@@ -182,6 +228,7 @@ function rebuildReaderGrid() {
 
   if (readerGridDoublePreview) {
     readerGridDoublePreview.classList.toggle('active', !!isGridDoublePreview);
+    readerGridDoublePreview.setAttribute('aria-pressed', isGridDoublePreview ? 'true' : 'false');
   }
   readerGrid.classList.toggle('is-double-preview', !!isGridDoublePreview);
 
@@ -195,10 +242,10 @@ function rebuildReaderGrid() {
     pageSequence.forEach(function(item, seqIdx) {
       if (item.type === 'blank') {
         var blankCard = createGridBlankCard(item, seqIdx);
-        if (blankCard) readerGrid.appendChild(blankCard);
+        if (blankCard) desired.push(blankCard);
       } else {
         var pageCard = createGridPageCard(item.pageIndex, seqIdx);
-        if (pageCard) readerGrid.appendChild(pageCard);
+        if (pageCard) desired.push(pageCard);
       }
     });
   } else {
@@ -206,26 +253,36 @@ function rebuildReaderGrid() {
     var usedBlankSeqIndices = [];
 
     previewGroups.forEach(function(group, gIdx) {
-      var spreadRow = document.createElement('div');
+      var spreadKey = group.kind + ':' + group.slots.join(',') + ':' + (group.insertedSlots || []).join(',');
+      if (group.insertedSlots && group.insertedSlots.length) {
+        var groupBlankIds = pageSequence.filter(function(item) { return item.type === 'blank'; })
+          .slice(usedBlankSeqIndices.length, usedBlankSeqIndices.length + group.insertedSlots.length)
+          .map(function(item) { return item.id; });
+        spreadKey += ':' + groupBlankIds.join(',');
+      }
+      usedSpreads.add(spreadKey);
+      var spreadRow = readerGridSpreads.get(spreadKey);
+      if (!spreadRow) { spreadRow = document.createElement('div'); readerGridSpreads.set(spreadKey, spreadRow); }
+      var spreadChildren = [];
       spreadRow.className = 'reader-grid-spread-row' + (group.kind === 'wide' ? ' is-wide-spread' : '');
 
-      var badgeEl = document.createElement('span');
+      var badgeEl = spreadRow.querySelector('.reader-grid-spread-badge') || document.createElement('span');
       badgeEl.className = 'reader-grid-spread-badge';
       var spreadLabel = (gIdx === 0 && group.kind === 'cover') ? '封面 Cover' : ('折页 ' + (gIdx + 1));
       badgeEl.innerHTML = spreadLabel + ' <b>[' + (readingDirection === 'rtl' ? '右←左' : '左→右') + ']</b>';
-      spreadRow.appendChild(badgeEl);
+      spreadChildren.push(badgeEl);
 
       if (group.kind === 'wide') {
         var pageIdx = group.pages[0];
         var seqIdx = pageSequence.findIndex(function(x) { return x.type === 'page' && x.pageIndex === pageIdx; });
         var card = createGridPageCard(pageIdx, seqIdx >= 0 ? seqIdx : 0);
-        if (card) spreadRow.appendChild(card);
+        if (card) spreadChildren.push(card);
       } else {
         group.slots.forEach(function(slot, sIdx) {
           if (slot !== null) {
             var seqIdx = pageSequence.findIndex(function(x) { return x.type === 'page' && x.pageIndex === slot; });
             var card = createGridPageCard(slot, seqIdx >= 0 ? seqIdx : 0);
-            if (card) spreadRow.appendChild(card);
+            if (card) spreadChildren.push(card);
           } else {
             var isInserted = group.insertedSlots && group.insertedSlots.indexOf(sIdx) !== -1;
             if (isInserted) {
@@ -239,20 +296,32 @@ function rebuildReaderGrid() {
               }
               if (blankSeqIdx !== -1) {
                 var blankCard = createGridBlankCard(pageSequence[blankSeqIdx], blankSeqIdx);
-                if (blankCard) spreadRow.appendChild(blankCard);
+                if (blankCard) spreadChildren.push(blankCard);
               } else {
-                spreadRow.appendChild(createGridPlaceholderCard('已插入空白页'));
+                spreadChildren.push(spreadRow.children[spreadChildren.length] || createGridPlaceholderCard('已插入空白页'));
               }
             } else {
-              spreadRow.appendChild(createGridPlaceholderCard(gIdx === 0 ? '封面留白' : '对开留白'));
+              spreadChildren.push(spreadRow.children[spreadChildren.length] || createGridPlaceholderCard(gIdx === 0 ? '封面留白' : '对开留白'));
             }
           }
         });
       }
-      readerGrid.appendChild(spreadRow);
+      reconcileReaderGridChildren(spreadRow, spreadChildren);
+      desired.push(spreadRow);
     });
   }
+  reconcileReaderGridChildren(readerGrid, desired);
+  readerGridSpreads.forEach(function(row, key) { if (!usedSpreads.has(key)) readerGridSpreads.delete(key); });
+  var usedCards = new Set(pageSequence.map(function(item) { return item.type === 'blank' ? 'blank:' + item.id : 'page:' + item.pageIndex; }));
+  readerGridCards.forEach(function(card, key) { if (!usedCards.has(key)) readerGridCards.delete(key); });
   updateGridCurrentPage();
+}
+
+function reconcileReaderGridChildren(parent, desired) {
+  desired.forEach(function(child, index) {
+    if (parent.children[index] !== child) parent.insertBefore(child, parent.children[index] || null);
+  });
+  while (parent.children.length > desired.length) parent.lastElementChild.remove();
 }
 
 function createGridDragHandle() {
@@ -325,10 +394,12 @@ function finishPointerGridDrag(pointerId, commit) {
   if (commit && state.targetSeqIndex !== null) {
     commitGridSequenceMove(state.sourceSeqIndex, state.targetSeqIndex, state.isAfter);
   }
+  flushReaderGridTypeRefresh();
 }
 
 function bindCardDragEvents(card, seqIdx, pointerHandle) {
   card.addEventListener('dragstart', function(e) {
+    var seqIdx = Number(card.dataset.seqIndex);
     draggedSeqIndex = seqIdx;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(seqIdx));
@@ -338,9 +409,11 @@ function bindCardDragEvents(card, seqIdx, pointerHandle) {
   card.addEventListener('dragend', function() {
     draggedSeqIndex = null;
     clearAllDropIndicators();
+    flushReaderGridTypeRefresh();
   });
 
   card.addEventListener('dragover', function(e) {
+    var seqIdx = Number(card.dataset.seqIndex);
     if (draggedSeqIndex === null || draggedSeqIndex === seqIdx) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -355,6 +428,7 @@ function bindCardDragEvents(card, seqIdx, pointerHandle) {
   });
 
   card.addEventListener('drop', function(e) {
+    var seqIdx = Number(card.dataset.seqIndex);
     e.preventDefault();
     e.stopPropagation();
     if (draggedSeqIndex === null || draggedSeqIndex === seqIdx) {
@@ -372,6 +446,7 @@ function bindCardDragEvents(card, seqIdx, pointerHandle) {
     e.stopPropagation();
   });
   pointerHandle.addEventListener('pointerdown', function(e) {
+    var seqIdx = Number(card.dataset.seqIndex);
     if (e.pointerType === 'mouse' || (e.button !== undefined && e.button !== 0)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -413,6 +488,8 @@ function openReaderGrid() {
 
 function closeReaderGrid() {
   if (!readerGridOverlay) return;
+  clearTimeout(readerGridTypeRefreshTimer);
+  readerGridTypeRefreshPending = false;
   readerGridOverlay.classList.remove('show');
   readerGridOverlay.setAttribute('aria-hidden', 'true');
   if (tGridButton) tGridButton.classList.remove('active');
@@ -476,9 +553,9 @@ if (readerGridPersist) {
 }
 
 window.addEventListener('jmv:preference-change', function(e) {
+  if (!readerInitialized) return;
   if (!e.detail) return;
   if (e.detail.name === 'readingDirection') applyReadingDirection(e.detail.value, false);
   if (e.detail.name === 'doubleWidthScale') applyDoubleWidthScale(e.detail.value, false);
   if (e.detail.name === 'readerMode' && e.detail.value !== readerMode) setReaderMode(e.detail.value, { persist: false });
 });
-applyReadingDirection(readingDirection, false);

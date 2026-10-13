@@ -56,8 +56,16 @@ def build_parser():
                         help='初始当前路径(默认与共享根目录相同)')
     parser.add_argument('-e', '--env', action='append', metavar='KEY=VALUE',
                         help='设置环境变量, 可重复指定')
-    parser.add_argument('--no-debug', action='store_false', dest='debug', default=True,
-                        help='关闭 Flask debug 模式')
+    debug_options = parser.add_mutually_exclusive_group()
+    debug_options.add_argument('--debug', action='store_true', default=False,
+                               help='开启开发调试（自动重载由 --reload / --no-reload 独立控制）')
+    debug_options.add_argument('--no-debug', action='store_false', dest='debug',
+                               help='关闭开发调试（默认关闭，不影响自动重载）')
+    reload_options = parser.add_mutually_exclusive_group()
+    reload_options.add_argument('--reload', action='store_true', dest='reload', default=True,
+                                help='代码修改后自动重载（默认开启）')
+    reload_options.add_argument('--no-reload', action='store_false', dest='reload',
+                                help='关闭代码自动重载')
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s {}'.format(__version__))
     return parser
@@ -106,6 +114,8 @@ def build_run_kwargs(args):
     if args.ssl:
         kwargs['ssl_context'] = 'adhoc'
     kwargs['debug'] = args.debug
+    kwargs['use_reloader'] = args.reload
+    kwargs['reloader_type'] = 'stat'
     return kwargs
 
 
@@ -121,6 +131,7 @@ def print_banner(args):
         print('局域网访问: {}://{}:{}'.format(scheme, lan_ip, args.port))
     if not args.password:
         print('提示     : 未设置密码, 任何人都能访问, 建议用 -P 设置密码')
+    print('自动重载 : {}，界面文件修改后刷新即可'.format('开启' if args.reload else '关闭'))
     print('按 Ctrl+C 停止服务')
     print('=' * 48)
 

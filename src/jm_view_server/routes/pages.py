@@ -85,7 +85,8 @@ class PageRoutesMixin:
 
     def api_thumbnail(self):
         """
-        API: 获取图片文件的纯内存缩略图（宽<=300px，WebP/JPEG 格式，零磁盘持久化）
+        API: 图片内存缩略图，或 source=system 的 Windows 视频缩略图。
+        系统缩略图缺失时不发送原视频，提取繁忙时允许客户端有界重试。
         支持 HTTP ETag / If-None-Match / Cache-Control 协商缓存
         """
         if not self.verify():
@@ -100,11 +101,24 @@ class PageRoutesMixin:
         if not os.path.isfile(path):
             return abort(404)
 
-        from ..thumbnail import thumbnail_cache
+        from ..thumbnail import thumbnail_cache, system_video_thumbnail_cache, ThumbnailBusyError
+        from ..windows_thumbnail import is_video_file
         width = request.args.get('w', 300, type=int)
         height = request.args.get('h', 400, type=int)
 
-        thumb_res = thumbnail_cache.get_thumbnail(path, max_width=width, max_height=height)
+        source = request.args.get('source', 'image')
+        if source not in ('image', 'system'):
+            return jsonify({'error': 'Unsupported thumbnail source'}), 400
+        system_source = source == 'system'
+        if system_source and not is_video_file(path):
+            return abort(404)
+        if not system_source and is_video_file(path):
+            return abort(404)
+        cache = system_video_thumbnail_cache if system_source else thumbnail_cache
+        try:
+            thumb_res = cache.get_thumbnail(path, max_width=width, max_height=height)
+        except ThumbnailBusyError:
+            return Response(status=503, headers={'Retry-After': '1', 'Cache-Control': 'no-store'})
         if thumb_res:
             data, mime_type, mtime, etag = thumb_res
 
@@ -118,6 +132,8 @@ class PageRoutesMixin:
             response.headers['ETag'] = etag
             return response
         else:
+            if system_source:
+                return abort(404)
             # 降级：未安装 Pillow 或缩放失败时回退到原图发送
             return send_from_directory(os.path.dirname(path), os.path.basename(path))
 

@@ -898,3 +898,11 @@ button.is-recycling { display: inline-flex; align-items: center; gap: 8px; }
     }
     .batch-bar .btn { min-height: 44px; }
 }
+
+/* 系统未提供视频缩略图时，在原预览位置保留类型图标。 */
+.video-thumbnail-fallback { display: none; color: var(--text-muted); }
+.thumbnail-failed > img[hidden] { display: none !important; }
+.thumbnail-failed > .video-thumbnail-fallback { display: grid; place-items: center; }
+.preview-col > .video-thumbnail-fallback { width: 48px; height: 64px; }
+.video-thumbnail-fallback svg { width: 24px; height: 24px; }
+.card-cover > .video-thumbnail-fallback svg { width: 46px; height: 46px; }

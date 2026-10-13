@@ -576,17 +576,20 @@ function initSettingsPage() {
     document.getElementById('progressCount').textContent = prefs.countPrefix('jmv-progress:');
   }
   refreshCounts();
+  window.addEventListener('jmv:sync-applied', function() { runSettingsUpdate(null, refreshCounts); });
   document.querySelectorAll('[data-clear]').forEach(function(button) {
     button.addEventListener('click', function() {
       var type = button.dataset.clear;
       var labels = { bookmarks: '全部收藏目录', recent: '全部最近访问记录', progress: '全部漫画阅读进度' };
-      if (!window.confirm('确定清除' + labels[type] + '？此操作无法撤销。')) return;
+      var shared = window.JmvSync && window.JmvSync.allows(type);
+      if (!window.confirm('确定清除' + labels[type] + '？' + (shared ? '此范围正在同步，也会清除共享记录。' : '') + '此操作无法撤销。')) return;
       runSettingsUpdate(button, function() {
+        if (shared) window.JmvSync.clearScope(type);
         if (type === 'bookmarks') localStorage.removeItem('plugin_jm_bookmarks');
         if (type === 'recent') localStorage.removeItem('jmv-recent');
         if (type === 'progress') prefs.clearPrefix('jmv-progress:');
         refreshCounts();
-        notify('本地数据已清理');
+        notify(shared ? '本机记录已清理，共享修改正在同步' : '本地数据已清理');
       }, { keepFocus: true });
     });
   });

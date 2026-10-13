@@ -19,6 +19,12 @@ def parse(argv):
     return cli.build_parser().parse_args(argv)
 
 
+@pytest.fixture(autouse=True)
+def isolated_user_data(tmp_path, monkeypatch):
+    monkeypatch.setenv('HOME', str(tmp_path))
+    monkeypatch.setenv('USERPROFILE', str(tmp_path))
+
+
 # ---------- 默认值 ----------
 
 def test_defaults():
@@ -32,7 +38,8 @@ def test_defaults():
     assert args.ip_whitelist is None
     assert args.current_path is None
     assert args.env is None
-    assert args.debug is True
+    assert args.debug is False
+    assert args.reload is True
 
 
 def test_positional_path_and_short_flags():
@@ -71,7 +78,75 @@ def test_parse_ip_whitelist():
 
 def test_run_kwargs_plain():
     args = parse(['x', '-p', '8080', '-H', '0.0.0.0'])
-    assert cli.build_run_kwargs(args) == {'host': '0.0.0.0', 'port': 8080, 'debug': True}
+    assert cli.build_run_kwargs(args) == {
+        'host': '0.0.0.0', 'port': 8080, 'debug': False,
+        'use_reloader': True, 'reloader_type': 'stat',
+    }
+
+
+def test_debug_requires_explicit_opt_in():
+    assert cli.build_run_kwargs(parse(['--debug']))['debug'] is True
+    assert cli.build_run_kwargs(parse(['--no-debug']))['debug'] is False
+    with pytest.raises(SystemExit):
+        parse(['--debug', '--no-debug'])
+
+
+@pytest.mark.parametrize('flags,debug,reload', [
+    ([], False, True), (['--no-debug'], False, True),
+    (['--no-reload'], False, False), (['--debug'], True, True),
+    (['--debug', '--no-reload'], True, False), (['--reload'], False, True),
+])
+def test_reload_and_debug_are_independent(flags, debug, reload):
+    kwargs = cli.build_run_kwargs(parse(flags))
+    assert kwargs['debug'] is debug
+    assert kwargs['use_reloader'] is reload
+
+
+def test_conflicting_reload_flags_are_rejected():
+    with pytest.raises(SystemExit):
+        parse(['--reload', '--no-reload'])
+
+
+@pytest.mark.parametrize('configured_key', [None, '', 'fixture-configured-key'])
+def test_reloader_keeps_login_cookie_valid(tmp_path, monkeypatch, configured_key):
+    monkeypatch.setenv('FLASK_SECRET_KEY', 'temporary-test-key')
+    if configured_key is None:
+        monkeypatch.delenv('FLASK_SECRET_KEY')
+    else:
+        monkeypatch.setenv('FLASK_SECRET_KEY', configured_key)
+    args = parse([str(tmp_path), '-P', 'fixture-password'])
+    parent = cli.build_server(args)
+    monkeypatch.setattr(parent.app, 'run', lambda **kwargs: None)
+    parent.run(**cli.build_run_kwargs(args))
+    with parent.app.test_request_context():
+        cookie = parent.app.session_interface.get_signing_serializer(parent.app).dumps({'password': args.password})
+    child = cli.build_server(args)
+    assert child.app.session_interface.get_signing_serializer(child.app).loads(cookie)['password'] == args.password
+    assert child.app.debug is False
+
+
+def test_explicit_env_secret_applies_to_parent_and_reloader_child(tmp_path, monkeypatch):
+    monkeypatch.setenv('FLASK_SECRET_KEY', 'previous-fixture-key')
+    args = parse([str(tmp_path), '-e', 'FLASK_SECRET_KEY=selected-fixture-key'])
+    parent = cli.build_server(args)
+    assert parent.app.secret_key == 'selected-fixture-key'
+    monkeypatch.setattr(parent.app, 'run', lambda **kwargs: None)
+    parent.run(**cli.build_run_kwargs(args))
+    assert cli.build_server(args).app.secret_key == parent.app.secret_key
+
+
+def test_templates_refresh_without_debug_or_process_restart(tmp_path):
+    from jinja2 import FileSystemLoader
+    template = tmp_path / 'live.html'
+    template.write_text('Before', encoding='utf-8')
+    server = cli.build_server(parse([str(tmp_path)]))
+    server.app.jinja_loader = FileSystemLoader(str(tmp_path))
+    assert server.app.jinja_env.get_template('live.html').render() == 'Before'
+    before = template.stat().st_mtime
+    template.write_text('After', encoding='utf-8')
+    os.utime(template, (before + 2, before + 2))
+    assert server.app.jinja_env.get_template('live.html').render() == 'After'
+    assert server.app.debug is False
 
 
 def test_run_kwargs_ssl_and_no_debug():

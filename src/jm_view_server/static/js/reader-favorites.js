@@ -3,63 +3,28 @@
     document.getElementById('tOpenFolder').style.display = 'none';
     document.getElementById('tAutoNext').style.display = 'none';
   }
-  document.querySelectorAll('#stream .page-img').forEach(function(image) {
-    image.title = '双击收藏图片';
-  });
-  var pendingPaths = new Set();
-
-  async function favoriteImage(image) {
-    if (!image) return;
-    var source = image.getAttribute('data-original') || image.getAttribute('data-src');
-    if (!source) return;
-    var path = new URL(source, location.origin).searchParams.get('path');
-    if (!path || pendingPaths.has(path)) return;
-    pendingPaths.add(path);
-    try {
-      var response = await fetch('/api/favorites', {
-        method: 'PUT', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({path: path})
-      });
-      if (!response.ok) throw new Error();
-      toast('图片已收藏');
-    } catch (error) { toast('收藏失败，请刷新后重试'); }
-    finally { pendingPaths.delete(path); }
+  function imagePath(image) {
+    var source = image && (image.getAttribute('data-original') || image.getAttribute('data-src'));
+    return source ? new URL(source, location.origin).searchParams.get('path') : null;
   }
-  stream.addEventListener('dblclick', function(event) {
-    var image = event.target.closest('.page-img');
-    if (!image || Date.now() < suppressPageClickUntil) return;
-    event.preventDefault();
-    clearTimeout(pageClickTimer);
-    favoriteImage(image);
-  });
-  // Touch double taps do not consistently produce a native dblclick.
-  var lastTap = null;
-  var pointerStart = null;
-  stream.addEventListener('pointerdown', function(event) {
-    if (event.pointerType === 'mouse' || !event.isPrimary) return;
-    pointerStart = {image: event.target.closest('.page-img'), x: event.clientX,
-      y: event.clientY, time: Date.now()};
-  });
-  stream.addEventListener('pointercancel', function() { pointerStart = null; lastTap = null; });
-  stream.addEventListener('pointermove', function(event) {
-    if (pointerStart && Math.hypot(event.clientX-pointerStart.x, event.clientY-pointerStart.y) > 10) {
-      pointerStart = null; lastTap = null;
-    }
-  });
-  stream.addEventListener('pointerup', function(event) {
-    if (event.pointerType === 'mouse' || !pointerStart) return;
-    var start = pointerStart;
-    pointerStart = null;
-    var now = Date.now();
-    if (!start.image || start.image !== event.target.closest('.page-img') ||
-        now - start.time > 300 || Math.hypot(event.clientX-start.x, event.clientY-start.y) > 10) {
-      lastTap = null; return;
-    }
-    if (lastTap && lastTap.image === start.image && now-lastTap.time < 350) {
-      clearTimeout(pageClickTimer);
-      suppressPageClickUntil = now + 400;
-      favoriteImage(start.image);
-      lastTap = null;
-    } else { lastTap = {image:start.image, time:now}; }
-  });
+  async function read(image) {
+    var path = imagePath(image);
+    if (!path) throw new Error('无法识别图片');
+    var response = await fetch('/api/favorites', {cache: 'no-store'});
+    if (!response.ok) throw new Error('无法读取收藏状态');
+    var data = await response.json();
+    return {path: path, favorite: data.images.some(function(item) { return JmvSync.canonicalPath(item.path) === JmvSync.canonicalPath(path); })};
+  }
+  async function set(image, favorite) {
+    var path = imagePath(image);
+    if (!path) throw new Error('无法识别图片');
+    var response = await fetch('/api/favorites', {
+      method: favorite ? 'PUT' : 'DELETE', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path: path})
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || '收藏操作失败，请重试');
+    return data.favorite;
+  }
+  window.JmvFavorites = {read: read, set: set, imagePath: imagePath};
 })();

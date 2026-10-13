@@ -1,4 +1,29 @@
 // ---------- 阅读模式、点击翻页与键盘快捷键 ----------
+var readerPageNavigation = null;
+function cancelReaderPageNavigation() {
+  if (!readerPageNavigation) return;
+  readerPageNavigation.timers.forEach(clearTimeout);
+  readerPageNavigation = null;
+}
+['pointerdown', 'wheel', 'keydown', 'blur', 'pagehide'].forEach(function(name) {
+  window.addEventListener(name, cancelReaderPageNavigation, {capture: true, passive: true});
+});
+function navigateDoublePage(index) {
+  cancelReaderPageNavigation();
+  var navigation = {index: index, timers: []};
+  readerPageNavigation = navigation;
+  function align() {
+    if (readerPageNavigation !== navigation || readerMode !== 'double' || !pages[index]) return;
+    setActiveDoubleGroup(findDoubleGroupIndex(index), index, false);
+    var rect = pages[index].getBoundingClientRect();
+    window.scrollBy(0, rect.top + rect.height / 2 - window.innerHeight / 2);
+  }
+  align();
+  [80, 180, 350, 700, 1200, 2000].forEach(function(delay) {
+    navigation.timers.push(setTimeout(align, delay));
+  });
+  navigation.timers.push(setTimeout(function() { if (readerPageNavigation === navigation) cancelReaderPageNavigation(); }, 2100));
+}
 function inEditable(t) {
   if (!t) return false;
   var tag = t.tagName;
@@ -9,6 +34,7 @@ function ensurePageLoaded(idx) {
   if (idx < 0 || idx >= pages.length) return;
   var img = pages[idx].querySelector('.page-img');
   if (!img) return;
+  if (window.JmvImageLoader) { JmvImageLoader.load(img); return; }
   var source = img.getAttribute('data-src');
   if (source && img.classList.contains('lazyload')) {
     img.src = source;
@@ -158,9 +184,10 @@ function removeDoubleBlankSlots() {
   doubleBlankSlots = [];
 }
 
-function createDoubleBlankSlot(groupIndex, slot, isInserted, beforePage) {
+function createDoubleBlankSlot(groupIndex, slot, isInserted, beforePage, isEmptySpread) {
   var blankSlot = document.createElement('div');
   blankSlot.className = 'reader-double-blank' + (isInserted ? ' is-inserted' : '');
+  if (isEmptySpread) blankSlot.classList.add('is-empty-spread');
   blankSlot.dataset.doubleGroup = String(groupIndex);
   blankSlot.dataset.doubleSlot = slot;
   blankSlot.style.setProperty('--reader-double-column', slot === 'left' ? '1' : '2');
@@ -216,10 +243,13 @@ function createDoubleBlankSlot(groupIndex, slot, isInserted, beforePage) {
       }
     });
 
-    blankSlot.appendChild(iconEl);
-    blankSlot.appendChild(labelEl);
-    blankSlot.appendChild(subEl);
-    blankSlot.appendChild(removeBtn);
+    var content = document.createElement('div');
+    content.className = 'reader-double-blank-content';
+    content.appendChild(iconEl);
+    content.appendChild(labelEl);
+    content.appendChild(subEl);
+    content.appendChild(removeBtn);
+    blankSlot.appendChild(content);
   } else {
     blankSlot.setAttribute('aria-hidden', 'true');
   }
@@ -297,7 +327,7 @@ function renderDoubleGroups() {
         if (group.slots[slotIdx] === null) {
           var side = slotIdx === 0 ? 'left' : 'right';
           var isInserted = group.insertedSlots && group.insertedSlots.indexOf(slotIdx) !== -1;
-          createDoubleBlankSlot(groupIndex, side, isInserted, group.beforePage);
+          createDoubleBlankSlot(groupIndex, side, isInserted, group.beforePage, group.pages.length === 0);
         }
       });
     }
@@ -305,7 +335,7 @@ function renderDoubleGroups() {
 }
 
 function preloadDoubleGroups(groupIndex) {
-  [groupIndex - 1, groupIndex, groupIndex + 1].forEach(function(idx) {
+  [groupIndex, groupIndex - 1, groupIndex + 1].forEach(function(idx) {
     var preloadGroup = doubleGroups[idx];
     if (!preloadGroup) return;
     preloadGroup.pages.forEach(ensurePageLoaded);
@@ -341,6 +371,7 @@ function scrollToDoubleGroup(groupIndex, behavior) {
 
 function updateDoubleGroupFromScroll() {
   if (readerMode !== 'double' || !doubleGroups.length) return;
+  if (readerPageNavigation) return;
   var viewportCenter = window.innerHeight / 2;
   var bestGroupIndex = activeDoubleGroupIndex;
   var bestDistance = Infinity;
@@ -348,7 +379,12 @@ function updateDoubleGroupFromScroll() {
     var element = doubleGroupElement(groupIndex);
     if (!element) return;
     var rect = element.getBoundingClientRect();
-    var distance = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+    var top = rect.top, bottom = rect.bottom;
+    group.pages.forEach(function(index) {
+      var other = pages[index].getBoundingClientRect();
+      top = Math.min(top, other.top); bottom = Math.max(bottom, other.bottom);
+    });
+    var distance = Math.abs((top + bottom) / 2 - viewportCenter);
     if (distance < bestDistance) {
       bestDistance = distance;
       bestGroupIndex = groupIndex;
@@ -394,30 +430,43 @@ function cleanupDoubleLayout() {
 function applyDoubleGroup(groupIndex, preferredPageIdx) {
   if (!doubleGroups.length) return;
   setActiveDoubleGroup(groupIndex, preferredPageIdx, true);
-  scrollToDoubleGroup(activeDoubleGroupIndex, 'smooth');
+  navigateDoublePage(activePageIndex);
 }
 
 function scheduleDoubleGroupRebuild() {
+  // Cached images can finish before the remaining reader modules are available.
+  // Initial mode setup consumes their classifications after all controls exist.
+  if (!readerInitialized) return;
   clearTimeout(doubleRebuildTimer);
   doubleRebuildTimer = setTimeout(function() {
     rebuildDoubleGroups(activePageIndex, { scroll: false });
   }, 0);
 }
 
-function updateImagePageType(img) {
-  if (!img || !img.naturalHeight) return;
-  var wide = img.naturalWidth / img.naturalHeight >= 1.2 ? '1' : '0';
+function updateImagePageType(img, loadedImage) {
+  loadedImage = loadedImage || img;
+  if (!img || !loadedImage || !loadedImage.naturalHeight) return;
+  var wide = loadedImage.naturalWidth / loadedImage.naturalHeight >= 1.2 ? '1' : '0';
   if (img.dataset.readerWide === wide) return;
+  var wasWide = img.dataset.readerWide === '1';
   img.dataset.readerWide = wide;
   scheduleDoubleGroupRebuild();
+  if (wasWide !== (wide === '1') && typeof requestReaderGridTypeRefresh === 'function') {
+    requestReaderGridTypeRefresh();
+  }
 }
 
 stream.addEventListener('load', function(e) {
-  if (e.target && e.target.classList && e.target.classList.contains('page-img')) updateImagePageType(e.target);
+  // A timeout replacement keeps the previous page shape while its GIF is shown.
+  if (e.target && e.target.currentSrc && e.target.currentSrc.indexOf('data:image/') === 0) return;
+  if (e.target && e.target.classList && e.target.classList.contains('page-img')) {
+    if (typeof updateImageRotationFit === 'function') updateImageRotationFit(e.target);
+    updateImagePageType(e.target);
+  }
 }, true);
 pages.forEach(function(page) {
   var img = page.querySelector('.page-img');
-  if (img && img.complete) updateImagePageType(img);
+  if (img && img.complete && img.currentSrc.indexOf('data:image/') !== 0) updateImagePageType(img);
 });
 
 function saveCurrentProgress(idx) {
@@ -426,6 +475,7 @@ function saveCurrentProgress(idx) {
     var range = ALBUM_RANGES[i];
     if (idx >= range.start && idx <= range.end) {
       try { localStorage.setItem(range.key, String(idx - range.start)); } catch (e) {}
+      if (window.JmvReaderMemory && !readerConfig.favorites && readerHasInteracted) JmvReaderMemory.progress(range.path || readerConfig.albumPath, pages[idx].querySelector('.page-img'));
       return;
     }
   }
@@ -441,6 +491,7 @@ function showSingleReaderTip() {
 
 function setReaderMode(mode, options) {
   options = options || {};
+  cancelReaderPageNavigation();
   var nextMode = mode === 'single' || mode === 'double' ? mode : 'scroll';
   var keepIndex = currentPageIdx();
   var previousMode = readerMode;
@@ -472,7 +523,7 @@ function setReaderMode(mode, options) {
     ensurePageLoaded(activePageIndex - 1);
     ensurePageLoaded(activePageIndex + 1);
     updateProgress(activePageIndex);
-    saveCurrentProgress(activePageIndex);
+    if (!options.initial) saveCurrentProgress(activePageIndex);
     if (!options.initial) showSingleReaderTip();
   } else if (readerMode === 'double') {
     rebuildDoubleGroups(activePageIndex, { behavior: options.initial ? 'auto' : 'smooth' });
